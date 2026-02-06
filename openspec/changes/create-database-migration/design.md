@@ -40,12 +40,13 @@ The ePacific/eRegulations system uses a SQL Server database that needs to be upg
 Structure:
 ```
 migrations/
-├── 001_add_new_columns.sql         # Add missing columns to existing tables
-├── 002_create_new_tables.sql       # Create tables that don't exist
-├── 003_rename_primary_keys.sql     # Rename PKs to EF6 convention
-├── 004_update_views.sql            # Drop and recreate views
-├── 005_add_foreign_keys.sql        # Add any new FK constraints
-└── 006_create_migration_history.sql # Add EF6 migration tracking
+├── 001_add_new_columns.sql            # Add missing columns to existing tables
+├── 002_create_new_tables.sql          # Create tables that don't exist
+├── 003_rename_primary_keys.sql        # Rename PKs to EF6 convention
+├── 004_update_views.sql               # Drop and recreate views
+├── 005_update_stored_procedures.sql   # Update SPs to match new schema
+├── 006_add_foreign_keys.sql           # Add any new FK constraints
+└── 007_create_migration_history.sql   # Add EF6 migration tracking
 ```
 
 ### Decision 2: Idempotent Scripts
@@ -92,19 +93,26 @@ EXEC sp_rename N'PK_Admin_Step', N'PK_dbo.Admin_Step', N'OBJECT'
 
 ## Migration Plan
 
+### Execution Environment
+- **Tool**: SQL Server Management Studio (SSMS)
+- **Target Database**: The existing old-structure database (NOT the new-structure reference)
+- **Approach**: In-place modification - scripts ALTER the existing database to match new schema
+- **Connection**: Connect SSMS to the old database, then execute scripts sequentially
+
 ### Pre-Migration
-1. Take full database backup
+1. Take full database backup of the OLD database
 2. Document current row counts for all tables
 3. Ensure no active connections (maintenance mode)
 4. Verify disk space for transaction logs
 
-### Execution Order
+### Execution Order (in SSMS against the old database)
 1. Run `001_add_new_columns.sql` - Add columns to existing tables
 2. Run `002_create_new_tables.sql` - Create new tables
 3. Run `003_rename_primary_keys.sql` - Rename PK constraints
 4. Run `004_update_views.sql` - Recreate views
-5. Run `005_add_foreign_keys.sql` - Add new FK constraints
-6. Run `006_create_migration_history.sql` - Add EF6 tracking
+5. Run `005_update_stored_procedures.sql` - Update stored procedures to match new schema
+6. Run `006_add_foreign_keys.sql` - Add new FK constraints
+7. Run `007_create_migration_history.sql` - Add EF6 tracking
 
 ### Post-Migration
 1. Verify row counts match pre-migration

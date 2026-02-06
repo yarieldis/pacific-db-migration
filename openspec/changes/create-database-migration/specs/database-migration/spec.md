@@ -2,6 +2,22 @@
 
 ## ADDED Requirements
 
+### Requirement: In-Place Database Migration
+The migration scripts SHALL modify an existing old-structure database in-place to match the new EF6 schema, preserving all existing data.
+
+#### Scenario: Execute migration against old database
+- **WHEN** the migration scripts are executed in SSMS against an existing old-structure database
+- **THEN** the database schema SHALL be modified to match the new EF6 structure
+- **AND** no new database SHALL be created
+- **AND** all existing data SHALL remain intact
+
+#### Scenario: Scripts are self-contained T-SQL
+- **WHEN** a migration script is opened in SSMS
+- **THEN** it SHALL be executable without external dependencies
+- **AND** it SHALL contain all necessary T-SQL commands for that migration step
+
+---
+
 ### Requirement: Schema Column Additions
 The migration script SHALL add new columns to existing tables to match the target EF6 schema structure.
 
@@ -71,6 +87,31 @@ The migration script SHALL create or update database views to match the target s
 #### Scenario: Create v_genericrequirement view
 - **WHEN** the migration script is executed
 - **THEN** a `v_genericrequirement` view SHALL be created that provides requirement information with media and step counts
+
+---
+
+### Requirement: Stored Procedure Updates
+The migration script SHALL update stored procedures to match the new schema definitions.
+
+#### Scenario: Update sp_on_updated_genericRequirement
+- **WHEN** the migration script is executed on the old database
+- **THEN** the `sp_on_updated_genericRequirement` stored procedure SHALL be replaced with the new schema version
+
+#### Scenario: Update sp_on_updated_objective
+- **WHEN** the migration script is executed on the old database
+- **THEN** the `sp_on_updated_objective` stored procedure SHALL be replaced with the new schema version
+
+#### Scenario: Update snapshot stored procedures
+- **WHEN** the migration script is executed on the old database
+- **THEN** the following stored procedures SHALL be replaced with new schema versions:
+  - `sp_take_snapshot_objective`
+  - `sp_update_snapshot_block`
+  - `sp_update_snapshot_recourse`
+  - `sp_update_snapshot_step`
+
+#### Scenario: Preserve legacy stored procedures
+- **WHEN** a stored procedure exists in the old schema but not in the new schema
+- **THEN** the stored procedure SHALL be preserved (not deleted)
 
 ---
 

@@ -1,5 +1,7 @@
 # Tasks: Database Migration Script
 
+> **Execution Model**: All migration scripts are T-SQL files designed to be executed in SQL Server Management Studio (SSMS) against an existing OLD-structure database. The scripts modify the database IN-PLACE to match the new EF6 schema.
+
 ## 1. Analysis & Preparation
 - [ ] 1.1 Complete detailed column-by-column comparison between old and new schemas
 - [ ] 1.2 Identify all columns that need to be added to existing tables
@@ -20,12 +22,11 @@
 - [ ] 2.10 Add corresponding columns to Snapshot tables
 
 ## 3. Migration Script: Create New Tables (002_create_new_tables.sql)
-- [ ] 3.1 Create `__MigrationHistory` table for EF6 tracking
-- [ ] 3.2 Create `Admin_ObjectiveSectionVisibility` table
-- [ ] 3.3 Create `Snapshot_ObjectiveSectionVisibility` table
-- [ ] 3.4 Create `FilterOption_Product` table
-- [ ] 3.5 Create `GenericRequirement_Cost` table
-- [ ] 3.6 Create `Snapshot_StepRequirementCost` table
+- [ ] 3.1 Create `Admin_ObjectiveSectionVisibility` table
+- [ ] 3.2 Create `Snapshot_ObjectiveSectionVisibility` table
+- [ ] 3.3 Create `FilterOption_Product` table
+- [ ] 3.4 Create `GenericRequirement_Cost` table
+- [ ] 3.5 Create `Snapshot_StepRequirementCost` table
 
 ## 4. Migration Script: Rename Primary Keys (003_rename_primary_keys.sql)
 - [ ] 4.1 Create script to rename all PKs from `PK_TableName` to `PK_dbo.TableName`
@@ -43,25 +44,34 @@
 - [ ] 5.6 Update `v_menu_tree` view
 - [ ] 5.7 Update `v_public_menu_tree` view
 
-## 6. Migration Script: Add Foreign Keys (005_add_foreign_keys.sql)
-- [ ] 6.1 Add FK for Admin_Step.Level_Id (if Level table exists)
-- [ ] 6.2 Add FK for EntityInCharge.Zone_Id (if Zone table exists)
-- [ ] 6.3 Add FK for Admin_StepResult.Document_Id to GenericRequirement
-- [ ] 6.4 Add any other missing FK constraints from new schema
+## 6. Migration Script: Update Stored Procedures (005_update_stored_procedures.sql)
+- [ ] 6.1 Update `sp_on_updated_genericRequirement` to match new schema
+- [ ] 6.2 Update `sp_on_updated_objective` to match new schema
+- [ ] 6.3 Update `sp_take_snapshot_objective` to match new schema
+- [ ] 6.4 Update `sp_update_snapshot_block` to match new schema
+- [ ] 6.5 Update `sp_update_snapshot_recourse` to match new schema
+- [ ] 6.6 Update `sp_update_snapshot_step` to match new schema
 
-## 7. Migration Script: EF Migration History (006_create_migration_history.sql)
-- [ ] 7.1 Create `__MigrationHistory` table with EF6 schema
-- [ ] 7.2 Insert initial migration record to mark baseline
+## 7. Migration Script: Add Foreign Keys (006_add_foreign_keys.sql)
+- [ ] 7.1 Add FK for Admin_Step.Level_Id (if Level table exists)
+- [ ] 7.2 Add FK for EntityInCharge.Zone_Id (if Zone table exists)
+- [ ] 7.3 Add FK for Admin_StepResult.Document_Id to GenericRequirement
+- [ ] 7.4 Add any other missing FK constraints from new schema
 
-## 8. Testing & Validation
-- [ ] 8.1 Create validation script to compare row counts
-- [ ] 8.2 Create script to verify all new columns exist
-- [ ] 8.3 Create script to verify all new tables exist
-- [ ] 8.4 Create script to verify PK naming convention
-- [ ] 8.5 Create script to test view queries
+## 8. Migration Script: EF Migration History (007_create_migration_history.sql)
+- [ ] 8.1 Create `__MigrationHistory` table with EF6 schema
+- [ ] 8.2 Insert initial migration record to mark baseline
 
-## 9. Documentation
-- [ ] 9.1 Document pre-migration checklist
-- [ ] 9.2 Document execution steps
-- [ ] 9.3 Document post-migration validation
-- [ ] 9.4 Document rollback procedure
+## 9. Testing & Validation
+- [ ] 9.1 Create validation script to compare row counts
+- [ ] 9.2 Create script to verify all new columns exist
+- [ ] 9.3 Create script to verify all new tables exist
+- [ ] 9.4 Create script to verify PK naming convention
+- [ ] 9.5 Create script to test view queries
+- [ ] 9.6 Create script to verify stored procedures updated
+
+## 10. Documentation
+- [ ] 10.1 Document pre-migration checklist
+- [ ] 10.2 Document execution steps
+- [ ] 10.3 Document post-migration validation
+- [ ] 10.4 Document rollback procedure
