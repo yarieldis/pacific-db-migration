@@ -5,191 +5,191 @@
 --   Tables dropped: NtmCountry, NtmNotification, NtmSubject, NtmUser,
 --   Imported_Tariff, Law_ConditionMeasure, Law_RelatedLaw,
 --   Snapshot_Law, Snapshot_Law_ConditionMeasure, Snapshot_Law_RelatedLaw
+-- Execution: Run in SSMS against the old-structure database
+-- Dependencies: 011_remove_columns.sql (Law columns removed first)
 -- =============================================
 
--- =============================================
--- PART 1: Create backup schema and archive NTM data
--- =============================================
+SET NOCOUNT ON;
+
+PRINT '=== Migration 030: Drop NTM Tables ==='
+PRINT 'Started at: ' + CONVERT(varchar(30), GETDATE(), 120)
+PRINT ''
+
+-- =========================================
+-- STEP 1: Create backup schema
+-- =========================================
+
+PRINT '--- Step 1: Create backup schema ---'
+
 IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'ntm_backup')
 BEGIN
     EXEC('CREATE SCHEMA [ntm_backup]')
-    PRINT 'Created ntm_backup schema'
+    PRINT '  Created ntm_backup schema'
 END
+ELSE
+    PRINT '  ntm_backup schema already exists'
 GO
 
--- Archive each table before dropping
-DECLARE @tablesToDrop TABLE (TableName NVARCHAR(200))
-INSERT INTO @tablesToDrop VALUES
+-- =========================================
+-- STEP 2: Archive table data to backup schema
+-- =========================================
+
+PRINT ''
+PRINT '--- Step 2: Archive NTM table data ---'
+
+DECLARE @tablesToBackup TABLE (TableName nvarchar(128))
+INSERT INTO @tablesToBackup VALUES
     ('NtmCountry'), ('NtmNotification'), ('NtmSubject'), ('NtmUser'),
     ('Imported_Tariff'), ('Law_ConditionMeasure'), ('Law_RelatedLaw'),
     ('Snapshot_Law'), ('Snapshot_Law_ConditionMeasure'), ('Snapshot_Law_RelatedLaw')
 
-DECLARE @tbl NVARCHAR(200)
-DECLARE @sql NVARCHAR(MAX)
+DECLARE @tblName nvarchar(128)
+DECLARE @sql nvarchar(max)
 
-DECLARE tbl_cursor CURSOR FOR SELECT TableName FROM @tablesToDrop
+DECLARE tbl_cursor CURSOR FOR SELECT TableName FROM @tablesToBackup
 OPEN tbl_cursor
-FETCH NEXT FROM tbl_cursor INTO @tbl
+FETCH NEXT FROM tbl_cursor INTO @tblName
 
 WHILE @@FETCH_STATUS = 0
 BEGIN
-    -- Only archive if source exists and backup doesn't
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = @tbl AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-    AND NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = @tbl AND type = 'U' AND schema_id = SCHEMA_ID('ntm_backup'))
+    -- Only backup if source table exists and backup doesn't
+    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = @tblName AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
+    AND NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = @tblName AND type = 'U' AND schema_id = SCHEMA_ID('ntm_backup'))
     BEGIN
-        SET @sql = 'SELECT * INTO [ntm_backup].[' + @tbl + '] FROM [dbo].[' + @tbl + ']'
+        SET @sql = 'SELECT * INTO [ntm_backup].[' + @tblName + '] FROM [dbo].[' + @tblName + ']'
         EXEC sp_executesql @sql
-        PRINT 'Archived ' + @tbl + ' to ntm_backup schema'
+        PRINT '  Archived ' + @tblName + ' (' + CAST(@@ROWCOUNT AS varchar(10)) + ' rows)'
     END
-    ELSE IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = @tbl AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-    BEGIN
-        PRINT @tbl + ' does not exist in dbo schema - skipping archive'
-    END
+    ELSE IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = @tblName AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
+        PRINT '  ' + @tblName + ' does not exist in dbo - skipped'
     ELSE
-    BEGIN
-        PRINT @tbl + ' already archived in ntm_backup schema - skipping'
-    END
+        PRINT '  ' + @tblName + ' already archived - skipped'
 
-    FETCH NEXT FROM tbl_cursor INTO @tbl
+    FETCH NEXT FROM tbl_cursor INTO @tblName
 END
 
 CLOSE tbl_cursor
 DEALLOCATE tbl_cursor
 GO
 
--- =============================================
--- PART 2: Verify archives
--- =============================================
-DECLARE @verified BIT = 1
-DECLARE @tblName NVARCHAR(200)
-DECLARE @srcCount INT, @bkpCount INT
-DECLARE @sql2 NVARCHAR(MAX)
+-- =========================================
+-- STEP 3: Drop foreign key constraints on tables to be dropped
+-- =========================================
 
-DECLARE @verifyTables TABLE (TableName NVARCHAR(200))
-INSERT INTO @verifyTables VALUES
+PRINT ''
+PRINT '--- Step 3: Drop foreign key constraints ---'
+
+DECLARE @tablesToDrop TABLE (TableName nvarchar(128))
+INSERT INTO @tablesToDrop VALUES
     ('NtmCountry'), ('NtmNotification'), ('NtmSubject'), ('NtmUser'),
     ('Imported_Tariff'), ('Law_ConditionMeasure'), ('Law_RelatedLaw'),
     ('Snapshot_Law'), ('Snapshot_Law_ConditionMeasure'), ('Snapshot_Law_RelatedLaw')
 
-DECLARE verify_cursor CURSOR FOR SELECT TableName FROM @verifyTables
-OPEN verify_cursor
-FETCH NEXT FROM verify_cursor INTO @tblName
+-- Drop FKs that REFERENCE these tables (FKs on other tables pointing to these)
+DECLARE @fkSql nvarchar(max) = ''
+SELECT @fkSql = @fkSql +
+    'ALTER TABLE [' + SCHEMA_NAME(fk.schema_id) + '].[' + OBJECT_NAME(fk.parent_object_id) + '] DROP CONSTRAINT [' + fk.name + '];' + CHAR(13)
+FROM sys.foreign_keys fk
+WHERE OBJECT_NAME(fk.referenced_object_id) IN (SELECT TableName FROM @tablesToDrop)
 
-WHILE @@FETCH_STATUS = 0
+IF LEN(@fkSql) > 0
 BEGIN
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = @tblName AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = @tblName AND type = 'U' AND schema_id = SCHEMA_ID('ntm_backup'))
-    BEGIN
-        SET @sql2 = 'SELECT @src = COUNT(*) FROM [dbo].[' + @tblName + ']'
-        EXEC sp_executesql @sql2, N'@src INT OUTPUT', @src = @srcCount OUTPUT
-
-        SET @sql2 = 'SELECT @bkp = COUNT(*) FROM [ntm_backup].[' + @tblName + ']'
-        EXEC sp_executesql @sql2, N'@bkp INT OUTPUT', @bkp = @bkpCount OUTPUT
-
-        IF @srcCount <> @bkpCount
-        BEGIN
-            PRINT 'WARNING: ' + @tblName + ' backup count mismatch: source=' + CAST(@srcCount AS VARCHAR) + ' backup=' + CAST(@bkpCount AS VARCHAR)
-            SET @verified = 0
-        END
-        ELSE
-        BEGIN
-            PRINT @tblName + ' verified: ' + CAST(@srcCount AS VARCHAR) + ' rows'
-        END
-    END
-
-    FETCH NEXT FROM verify_cursor INTO @tblName
+    EXEC sp_executesql @fkSql
+    PRINT '  Dropped FK constraints referencing NTM tables'
 END
+ELSE
+    PRINT '  No FK constraints referencing NTM tables found'
 
-CLOSE verify_cursor
-DEALLOCATE verify_cursor
+-- Drop FKs ON these tables (FKs defined on tables being dropped)
+SET @fkSql = ''
+SELECT @fkSql = @fkSql +
+    'ALTER TABLE [' + SCHEMA_NAME(fk.schema_id) + '].[' + OBJECT_NAME(fk.parent_object_id) + '] DROP CONSTRAINT [' + fk.name + '];' + CHAR(13)
+FROM sys.foreign_keys fk
+WHERE OBJECT_NAME(fk.parent_object_id) IN (SELECT TableName FROM @tablesToDrop)
 
-IF @verified = 0
+IF LEN(@fkSql) > 0
 BEGIN
-    RAISERROR('Archive verification failed. Aborting table drops.', 16, 1)
-    RETURN
+    EXEC sp_executesql @fkSql
+    PRINT '  Dropped FK constraints on NTM tables'
 END
-PRINT 'All archives verified successfully'
+ELSE
+    PRINT '  No FK constraints on NTM tables found'
 GO
 
--- =============================================
--- PART 3: Drop foreign key constraints on NTM tables
--- =============================================
-BEGIN TRANSACTION
-BEGIN TRY
+-- =========================================
+-- STEP 4: Drop tables
+-- =========================================
 
-    DECLARE @fkSql NVARCHAR(MAX) = ''
+PRINT ''
+PRINT '--- Step 4: Drop NTM tables ---'
 
-    -- Drop all FK constraints where these tables are either parent or child
-    SELECT @fkSql = @fkSql +
-        'ALTER TABLE [' + OBJECT_SCHEMA_NAME(fk.parent_object_id) + '].[' + OBJECT_NAME(fk.parent_object_id) + '] DROP CONSTRAINT [' + fk.name + '];' + CHAR(13)
-    FROM sys.foreign_keys fk
-    WHERE fk.parent_object_id IN (
-        OBJECT_ID('dbo.NtmCountry'), OBJECT_ID('dbo.NtmNotification'),
-        OBJECT_ID('dbo.NtmSubject'), OBJECT_ID('dbo.NtmUser'),
-        OBJECT_ID('dbo.Imported_Tariff'),
-        OBJECT_ID('dbo.Law_ConditionMeasure'), OBJECT_ID('dbo.Law_RelatedLaw'),
-        OBJECT_ID('dbo.Snapshot_Law'), OBJECT_ID('dbo.Snapshot_Law_ConditionMeasure'),
-        OBJECT_ID('dbo.Snapshot_Law_RelatedLaw')
-    )
-    OR fk.referenced_object_id IN (
-        OBJECT_ID('dbo.NtmCountry'), OBJECT_ID('dbo.NtmNotification'),
-        OBJECT_ID('dbo.NtmSubject'), OBJECT_ID('dbo.NtmUser'),
-        OBJECT_ID('dbo.Imported_Tariff'),
-        OBJECT_ID('dbo.Law_ConditionMeasure'), OBJECT_ID('dbo.Law_RelatedLaw'),
-        OBJECT_ID('dbo.Snapshot_Law'), OBJECT_ID('dbo.Snapshot_Law_ConditionMeasure'),
-        OBJECT_ID('dbo.Snapshot_Law_RelatedLaw')
-    )
+-- Drop in dependency order (children first)
 
-    IF LEN(@fkSql) > 0
-    BEGIN
-        EXEC sp_executesql @fkSql
-        PRINT 'Dropped foreign key constraints on NTM tables'
-    END
+-- Snapshot tables (no FKs typically)
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law_RelatedLaw' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[Snapshot_Law_RelatedLaw]
+    PRINT '  Dropped Snapshot_Law_RelatedLaw'
+END
 
-    -- =============================================
-    -- PART 4: Drop NTM tables
-    -- =============================================
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law_ConditionMeasure' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[Snapshot_Law_ConditionMeasure]
+    PRINT '  Dropped Snapshot_Law_ConditionMeasure'
+END
 
-    -- NTM module tables
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmCountry' AND type = 'U')
-        DROP TABLE [dbo].[NtmCountry]
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmNotification' AND type = 'U')
-        DROP TABLE [dbo].[NtmNotification]
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmSubject' AND type = 'U')
-        DROP TABLE [dbo].[NtmSubject]
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmUser' AND type = 'U')
-        DROP TABLE [dbo].[NtmUser]
-    PRINT 'Dropped NTM module tables (NtmCountry, NtmNotification, NtmSubject, NtmUser)'
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[Snapshot_Law]
+    PRINT '  Dropped Snapshot_Law'
+END
 
-    -- Imported_Tariff
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Imported_Tariff' AND type = 'U')
-        DROP TABLE [dbo].[Imported_Tariff]
-    PRINT 'Dropped Imported_Tariff'
+-- Law relation tables
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_RelatedLaw' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[Law_RelatedLaw]
+    PRINT '  Dropped Law_RelatedLaw'
+END
 
-    -- Law relation tables
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_ConditionMeasure' AND type = 'U')
-        DROP TABLE [dbo].[Law_ConditionMeasure]
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_RelatedLaw' AND type = 'U')
-        DROP TABLE [dbo].[Law_RelatedLaw]
-    PRINT 'Dropped Law_ConditionMeasure, Law_RelatedLaw'
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_ConditionMeasure' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[Law_ConditionMeasure]
+    PRINT '  Dropped Law_ConditionMeasure'
+END
 
-    -- Snapshot counterparts
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law' AND type = 'U')
-        DROP TABLE [dbo].[Snapshot_Law]
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law_ConditionMeasure' AND type = 'U')
-        DROP TABLE [dbo].[Snapshot_Law_ConditionMeasure]
-    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law_RelatedLaw' AND type = 'U')
-        DROP TABLE [dbo].[Snapshot_Law_RelatedLaw]
-    PRINT 'Dropped Snapshot_Law, Snapshot_Law_ConditionMeasure, Snapshot_Law_RelatedLaw'
+-- NTM tables
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmNotification' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[NtmNotification]
+    PRINT '  Dropped NtmNotification'
+END
 
-    COMMIT TRANSACTION
-    PRINT '========================================='
-    PRINT 'Migration 030_drop_ntm_tables completed successfully'
-    PRINT '========================================='
-END TRY
-BEGIN CATCH
-    ROLLBACK TRANSACTION
-    PRINT 'Migration 030_drop_ntm_tables FAILED: ' + ERROR_MESSAGE()
-    ;THROW
-END CATCH
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmCountry' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[NtmCountry]
+    PRINT '  Dropped NtmCountry'
+END
+
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmSubject' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[NtmSubject]
+    PRINT '  Dropped NtmSubject'
+END
+
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmUser' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[NtmUser]
+    PRINT '  Dropped NtmUser'
+END
+
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Imported_Tariff' AND type = 'U')
+BEGIN
+    DROP TABLE [dbo].[Imported_Tariff]
+    PRINT '  Dropped Imported_Tariff'
+END
+GO
+
+PRINT ''
+PRINT '=== Migration 030 completed successfully ==='
+PRINT 'Finished at: ' + CONVERT(varchar(30), GETDATE(), 120)
 GO

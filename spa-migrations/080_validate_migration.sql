@@ -2,336 +2,442 @@
 -- Migration: 080_validate_migration
 -- Date: 2026-02-16
 -- Description: Post-migration validation script.
---   Verifies all migration changes have been applied correctly.
+--   Verifies all SPA migration changes have been applied correctly.
+--   Run after all migration scripts (010-070) have completed.
+-- Execution: Run in SSMS against the migrated database
+-- Dependencies: All previous migration scripts (010-070)
 -- =============================================
 
-PRINT '========================================='
-PRINT 'SPA Migration Validation'
-PRINT '========================================='
+SET NOCOUNT ON;
+
+PRINT '============================================='
+PRINT '  SPA Migration Validation'
+PRINT '  Started at: ' + CONVERT(varchar(30), GETDATE(), 120)
+PRINT '============================================='
 PRINT ''
 
-DECLARE @errors INT = 0
+DECLARE @pass int = 0
+DECLARE @fail int = 0
+DECLARE @total int = 0
 
--- =============================================
--- 1. Verify new columns exist
--- =============================================
-PRINT '--- Verifying new columns ---'
+-- Helper: Check column exists
+-- We'll accumulate results manually
 
--- Admin_Step columns
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Level_Id' AND object_id = OBJECT_ID('dbo.Admin_Step'))
-BEGIN PRINT 'FAIL: Admin_Step.Level_Id missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Admin_Step.Level_Id'
+-- =========================================
+-- SECTION 1: New Column Checks (~40 columns on 22 tables)
+-- =========================================
 
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'NumberOfUsers' AND object_id = OBJECT_ID('dbo.Admin_Step'))
-BEGIN PRINT 'FAIL: Admin_Step.NumberOfUsers missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Admin_Step.NumberOfUsers'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Summary' AND object_id = OBJECT_ID('dbo.Admin_Step'))
-BEGIN PRINT 'FAIL: Admin_Step.Summary missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Admin_Step.Summary'
-
--- Admin_Step_i18n
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Summary' AND object_id = OBJECT_ID('dbo.Admin_Step_i18n'))
-BEGIN PRINT 'FAIL: Admin_Step_i18n.Summary missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Admin_Step_i18n.Summary'
-
--- EntityInCharge
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Zone_Id' AND object_id = OBJECT_ID('dbo.EntityInCharge'))
-BEGIN PRINT 'FAIL: EntityInCharge.Zone_Id missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: EntityInCharge.Zone_Id'
-
--- GenericRequirement
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsEmittedByInstitution' AND object_id = OBJECT_ID('dbo.GenericRequirement'))
-BEGIN PRINT 'FAIL: GenericRequirement.IsEmittedByInstitution missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: GenericRequirement.IsEmittedByInstitution'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'NumberOfPages' AND object_id = OBJECT_ID('dbo.GenericRequirement'))
-BEGIN PRINT 'FAIL: GenericRequirement.NumberOfPages missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: GenericRequirement.NumberOfPages'
-
--- UnitInCharge
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Website' AND object_id = OBJECT_ID('dbo.UnitInCharge'))
-BEGIN PRINT 'FAIL: UnitInCharge.Website missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: UnitInCharge.Website'
-
--- Media_i18n
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'FileName' AND object_id = OBJECT_ID('dbo.Media_i18n'))
-BEGIN PRINT 'FAIL: Media_i18n.FileName missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Media_i18n.FileName'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Extention' AND object_id = OBJECT_ID('dbo.Media_i18n'))
-BEGIN PRINT 'FAIL: Media_i18n.Extention missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Media_i18n.Extention'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Description' AND object_id = OBJECT_ID('dbo.Media_i18n'))
-BEGIN PRINT 'FAIL: Media_i18n.Description missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Media_i18n.Description'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Length' AND object_id = OBJECT_ID('dbo.Media_i18n'))
-BEGIN PRINT 'FAIL: Media_i18n.Length missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Media_i18n.Length'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'PreviewImageName' AND object_id = OBJECT_ID('dbo.Media_i18n'))
-BEGIN PRINT 'FAIL: Media_i18n.PreviewImageName missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Media_i18n.PreviewImageName'
-
--- Feedback
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Status' AND object_id = OBJECT_ID('dbo.Feedback'))
-BEGIN PRINT 'FAIL: Feedback.Status missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Feedback.Status'
-
--- Filter
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsProductRelated' AND object_id = OBJECT_ID('dbo.Filter'))
-BEGIN PRINT 'FAIL: Filter.IsProductRelated missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Filter.IsProductRelated'
-
--- Admin_StepSectionVisibility
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsSummaryVisible' AND object_id = OBJECT_ID('dbo.Admin_StepSectionVisibility'))
-BEGIN PRINT 'FAIL: Admin_StepSectionVisibility.IsSummaryVisible missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Admin_StepSectionVisibility.IsSummaryVisible'
-
--- Snapshot_Step
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Level_Id' AND object_id = OBJECT_ID('dbo.Snapshot_Step'))
-BEGIN PRINT 'FAIL: Snapshot_Step.Level_Id missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_Step.Level_Id'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'NumberOfUsers' AND object_id = OBJECT_ID('dbo.Snapshot_Step'))
-BEGIN PRINT 'FAIL: Snapshot_Step.NumberOfUsers missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_Step.NumberOfUsers'
-
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Summary' AND object_id = OBJECT_ID('dbo.Snapshot_Step'))
-BEGIN PRINT 'FAIL: Snapshot_Step.Summary missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_Step.Summary'
-
--- Snapshot_StepSectionVisibility
-IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsSummaryVisible' AND object_id = OBJECT_ID('dbo.Snapshot_StepSectionVisibility'))
-BEGIN PRINT 'FAIL: Snapshot_StepSectionVisibility.IsSummaryVisible missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_StepSectionVisibility.IsSummaryVisible'
-
+PRINT '--- Section 1: New Column Existence Checks ---'
 PRINT ''
 
--- =============================================
--- 2. Verify columns removed
--- =============================================
-PRINT '--- Verifying removed columns ---'
+-- Base tables (12)
+-- Admin_Step: Level_Id, NumberOfUsers, Summary, IsReachingOffice
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Level_Id' AND object_id = OBJECT_ID('dbo.Admin_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Admin_Step.Level_Id missing' END
+SET @total += 1
 
-IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsLegislation' AND object_id = OBJECT_ID('dbo.Law'))
-BEGIN PRINT 'FAIL: Law.IsLegislation still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Law.IsLegislation removed'
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'NumberOfUsers' AND object_id = OBJECT_ID('dbo.Admin_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Admin_Step.NumberOfUsers missing' END
+SET @total += 1
 
-IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'PublishedStatus' AND object_id = OBJECT_ID('dbo.Law'))
-BEGIN PRINT 'FAIL: Law.PublishedStatus still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Law.PublishedStatus removed'
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Summary' AND object_id = OBJECT_ID('dbo.Admin_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Admin_Step.Summary missing' END
+SET @total += 1
 
-IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsVisibleInPublicHomePage' AND object_id = OBJECT_ID('dbo.Admin_Menu'))
-BEGIN PRINT 'FAIL: Admin_Menu.IsVisibleInPublicHomePage still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Admin_Menu.IsVisibleInPublicHomePage removed'
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsReachingOffice' AND object_id = OBJECT_ID('dbo.Admin_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Admin_Step.IsReachingOffice missing' END
+SET @total += 1
 
--- Verify Law table has exactly 12 columns
-DECLARE @lawColCount INT
+-- Admin_Step_i18n: Summary
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Summary' AND object_id = OBJECT_ID('dbo.Admin_Step_i18n'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Admin_Step_i18n.Summary missing' END
+SET @total += 1
+
+-- Admin_StepRequirement: IsEmittedByInstitution
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsEmittedByInstitution' AND object_id = OBJECT_ID('dbo.Admin_StepRequirement'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Admin_StepRequirement.IsEmittedByInstitution missing' END
+SET @total += 1
+
+-- Admin_StepSectionVisibility: IsSummaryVisible
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsSummaryVisible' AND object_id = OBJECT_ID('dbo.Admin_StepSectionVisibility'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Admin_StepSectionVisibility.IsSummaryVisible missing' END
+SET @total += 1
+
+-- EntityInCharge: Zone_Id
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Zone_Id' AND object_id = OBJECT_ID('dbo.EntityInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: EntityInCharge.Zone_Id missing' END
+SET @total += 1
+
+-- Feedback: Status
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Status' AND object_id = OBJECT_ID('dbo.Feedback'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Feedback.Status missing' END
+SET @total += 1
+
+-- Filter: IsProductRelated
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsProductRelated' AND object_id = OBJECT_ID('dbo.Filter'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Filter.IsProductRelated missing' END
+SET @total += 1
+
+-- GenericRequirement: NumberOfPages
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'NumberOfPages' AND object_id = OBJECT_ID('dbo.GenericRequirement'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: GenericRequirement.NumberOfPages missing' END
+SET @total += 1
+
+-- Media_i18n: FileName, Extention, Description, Length, PreviewImageName
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'FileName' AND object_id = OBJECT_ID('dbo.Media_i18n'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Media_i18n.FileName missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Extention' AND object_id = OBJECT_ID('dbo.Media_i18n'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Media_i18n.Extention missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Description' AND object_id = OBJECT_ID('dbo.Media_i18n'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Media_i18n.Description missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Length' AND object_id = OBJECT_ID('dbo.Media_i18n'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Media_i18n.Length missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'PreviewImageName' AND object_id = OBJECT_ID('dbo.Media_i18n'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Media_i18n.PreviewImageName missing' END
+SET @total += 1
+
+-- Public_Team_Member: Phone, Email
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Phone' AND object_id = OBJECT_ID('dbo.Public_Team_Member'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Public_Team_Member.Phone missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Email' AND object_id = OBJECT_ID('dbo.Public_Team_Member'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Public_Team_Member.Email missing' END
+SET @total += 1
+
+-- UnitInCharge: Website
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Website' AND object_id = OBJECT_ID('dbo.UnitInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: UnitInCharge.Website missing' END
+SET @total += 1
+
+-- UnitInCharge_i18n: Website
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Website' AND object_id = OBJECT_ID('dbo.UnitInCharge_i18n'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: UnitInCharge_i18n.Website missing' END
+SET @total += 1
+
+-- Snapshot tables (10)
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'ExplanatoryText' AND object_id = OBJECT_ID('dbo.Snapshot_Objective'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_Objective.ExplanatoryText missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Level_Id' AND object_id = OBJECT_ID('dbo.Snapshot_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_Step.Level_Id missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'NumberOfUsers' AND object_id = OBJECT_ID('dbo.Snapshot_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_Step.NumberOfUsers missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Summary' AND object_id = OBJECT_ID('dbo.Snapshot_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_Step.Summary missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsReachingOffice' AND object_id = OBJECT_ID('dbo.Snapshot_Step'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_Step.IsReachingOffice missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Zone_Id' AND object_id = OBJECT_ID('dbo.Snapshot_StepEntityInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepEntityInCharge.Zone_Id missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Zone_Id' AND object_id = OBJECT_ID('dbo.Snapshot_StepRecourseEntityInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepRecourseEntityInCharge.Zone_Id missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Website' AND object_id = OBJECT_ID('dbo.Snapshot_StepRecourseUnitInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepRecourseUnitInCharge.Website missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'GoogleMapsURL' AND object_id = OBJECT_ID('dbo.Snapshot_StepRegionalEntityInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepRegionalEntityInCharge.GoogleMapsURL missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Zone_Id' AND object_id = OBJECT_ID('dbo.Snapshot_StepRegionalEntityInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepRegionalEntityInCharge.Zone_Id missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Website' AND object_id = OBJECT_ID('dbo.Snapshot_StepRegionalUnitInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepRegionalUnitInCharge.Website missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'GenericRequirement_NumberOfPages' AND object_id = OBJECT_ID('dbo.Snapshot_StepRequirement'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepRequirement.GenericRequirement_NumberOfPages missing' END
+SET @total += 1
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsEmittedByInstitution' AND object_id = OBJECT_ID('dbo.Snapshot_StepRequirement'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepRequirement.IsEmittedByInstitution missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsSummaryVisible' AND object_id = OBJECT_ID('dbo.Snapshot_StepSectionVisibility'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepSectionVisibility.IsSummaryVisible missing' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.columns WHERE name = 'Website' AND object_id = OBJECT_ID('dbo.Snapshot_StepUnitInCharge'))
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepUnitInCharge.Website missing' END
+SET @total += 1
+
+PRINT '  Column checks: ' + CAST(@pass AS varchar(10)) + ' passed, ' + CAST(@fail AS varchar(10)) + ' failed (of ' + CAST(@total AS varchar(10)) + ')'
+
+-- =========================================
+-- SECTION 2: Column Type Modifications (2 checks)
+-- =========================================
+
+PRINT ''
+PRINT '--- Section 2: Column Type Modification Checks ---'
+
+-- Feedback.Email should be nvarchar(100) = 200 bytes max_length
+IF EXISTS (SELECT 1 FROM sys.columns c WHERE c.name = 'Email' AND c.object_id = OBJECT_ID('dbo.Feedback') AND c.max_length = 200)
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Feedback.Email not nvarchar(100)' END
+SET @total += 1
+
+-- Feedback.Type should be NOT NULL
+IF EXISTS (SELECT 1 FROM sys.columns c WHERE c.name = 'Type' AND c.object_id = OBJECT_ID('dbo.Feedback') AND c.is_nullable = 0)
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Feedback.Type still nullable' END
+SET @total += 1
+
+PRINT '  Type modification checks: ' + CAST(@pass AS varchar(10)) + ' total passed so far'
+
+-- =========================================
+-- SECTION 3: Law Table Structure (12 columns expected)
+-- =========================================
+
+PRINT ''
+PRINT '--- Section 3: Law Table Column Count ---'
+
+DECLARE @lawColCount int
 SELECT @lawColCount = COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('dbo.Law')
-IF @lawColCount <> 12
-BEGIN PRINT 'FAIL: Law table has ' + CAST(@lawColCount AS VARCHAR) + ' columns (expected 12)'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Law table has 12 columns'
+IF @lawColCount = 12
+BEGIN SET @pass += 1 PRINT '  PASS: Law table has 12 columns' END
+ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Law table has ' + CAST(@lawColCount AS varchar(10)) + ' columns (expected 12)' END
+SET @total += 1
+
+-- Snapshot_StepLaw.IsLegislation should NOT exist
+IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE name = 'IsLegislation' AND object_id = OBJECT_ID('dbo.Snapshot_StepLaw'))
+BEGIN SET @pass += 1 PRINT '  PASS: Snapshot_StepLaw.IsLegislation removed' END
+ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Snapshot_StepLaw.IsLegislation still exists' END
+SET @total += 1
+
+-- =========================================
+-- SECTION 4: New Tables (5 tables)
+-- =========================================
 
 PRINT ''
+PRINT '--- Section 4: New Table Existence ---'
 
--- =============================================
--- 3. Verify new tables exist
--- =============================================
-PRINT '--- Verifying new tables ---'
+DECLARE @newTables TABLE (TableName nvarchar(128), ExpectedCols int)
+INSERT INTO @newTables VALUES
+    ('Admin_ObjectiveSectionVisibility', 11),
+    ('Snapshot_ObjectiveSectionVisibility', 11),
+    ('FilterOption_Product', 4),
+    ('GenericRequirement_Cost', 11),
+    ('Snapshot_StepRequirementCost', 10)
 
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Admin_ObjectiveSectionVisibility' AND type = 'U')
-BEGIN PRINT 'FAIL: Admin_ObjectiveSectionVisibility missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Admin_ObjectiveSectionVisibility exists'
-
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_ObjectiveSectionVisibility' AND type = 'U')
-BEGIN PRINT 'FAIL: Snapshot_ObjectiveSectionVisibility missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_ObjectiveSectionVisibility exists'
-
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = 'FilterOption_Product' AND type = 'U')
-BEGIN PRINT 'FAIL: FilterOption_Product missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: FilterOption_Product exists'
-
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = 'GenericRequirement_Cost' AND type = 'U')
-BEGIN PRINT 'FAIL: GenericRequirement_Cost missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: GenericRequirement_Cost exists'
-
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_StepRequirementCost' AND type = 'U')
-BEGIN PRINT 'FAIL: Snapshot_StepRequirementCost missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_StepRequirementCost exists'
-
-PRINT ''
-
--- =============================================
--- 4. Verify NTM tables dropped
--- =============================================
-PRINT '--- Verifying NTM tables dropped ---'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmCountry' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: NtmCountry still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: NtmCountry dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmNotification' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: NtmNotification still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: NtmNotification dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmSubject' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: NtmSubject still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: NtmSubject dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'NtmUser' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: NtmUser still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: NtmUser dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Imported_Tariff' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: Imported_Tariff still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Imported_Tariff dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_ConditionMeasure' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: Law_ConditionMeasure still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Law_ConditionMeasure dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_RelatedLaw' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: Law_RelatedLaw still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Law_RelatedLaw dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: Snapshot_Law still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_Law dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law_ConditionMeasure' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: Snapshot_Law_ConditionMeasure still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_Law_ConditionMeasure dropped'
-
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_Law_RelatedLaw' AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
-BEGIN PRINT 'FAIL: Snapshot_Law_RelatedLaw still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Snapshot_Law_RelatedLaw dropped'
-
-PRINT ''
-
--- =============================================
--- 5. Verify backup data exists
--- =============================================
-PRINT '--- Verifying backups ---'
-
-IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_PreSPA_Backup' AND type = 'U')
-BEGIN PRINT 'FAIL: Law_PreSPA_Backup missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: Law_PreSPA_Backup exists (' + CAST((SELECT COUNT(*) FROM [dbo].[Law_PreSPA_Backup]) AS VARCHAR) + ' rows)'
-
-IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'ntm_backup')
-BEGIN PRINT 'FAIL: ntm_backup schema missing'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: ntm_backup schema exists'
-
-PRINT ''
-
--- =============================================
--- 6. Verify views exist
--- =============================================
-PRINT '--- Verifying views ---'
-
-DECLARE @viewNames TABLE (ViewName NVARCHAR(200))
-INSERT INTO @viewNames VALUES
-    ('Public_Medias'), ('view_Public_Menu_Mono'), ('view_Public_Objectives_Current'),
-    ('view_Public_Regulations_Blocks'), ('view_Public_Treeview_For_Summary'),
-    ('view_sub_Public_Menu_Level1'), ('view_sub_Public_Menu_Level2'),
-    ('view_sub_Public_Menu_Level3'), ('view_sub_Public_Menu_Level4'),
-    ('view_sub_Public_Menu_Level5'),
-    ('v_translation_item'), ('Transfert'), ('VIEW_step_dbl'),
-    ('VIEW2'), ('VIEW3'), ('VIEW4'), ('VIEW5'), ('VIEW6'),
-    ('v_law'), ('v_public_review')
-
-DECLARE @vName NVARCHAR(200)
-DECLARE v_cursor CURSOR FOR SELECT ViewName FROM @viewNames
-OPEN v_cursor
-FETCH NEXT FROM v_cursor INTO @vName
+DECLARE @ntName nvarchar(128), @ntExpCols int, @ntActCols int
+DECLARE nt_cursor CURSOR FOR SELECT TableName, ExpectedCols FROM @newTables
+OPEN nt_cursor
+FETCH NEXT FROM nt_cursor INTO @ntName, @ntExpCols
 WHILE @@FETCH_STATUS = 0
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM sys.views WHERE name = @vName)
-    BEGIN PRINT 'FAIL: View ' + @vName + ' missing'; SET @errors = @errors + 1 END
-    ELSE PRINT 'OK: View ' + @vName + ' exists'
-    FETCH NEXT FROM v_cursor INTO @vName
+    IF EXISTS (SELECT 1 FROM sys.objects WHERE name = @ntName AND type = 'U')
+    BEGIN
+        SELECT @ntActCols = COUNT(*) FROM sys.columns WHERE object_id = OBJECT_ID('dbo.' + @ntName)
+        IF @ntActCols = @ntExpCols
+        BEGIN SET @pass += 1 PRINT '  PASS: ' + @ntName + ' exists (' + CAST(@ntActCols AS varchar(5)) + ' cols)' END
+        ELSE BEGIN SET @fail += 1 PRINT '  FAIL: ' + @ntName + ' has ' + CAST(@ntActCols AS varchar(5)) + ' cols (expected ' + CAST(@ntExpCols AS varchar(5)) + ')' END
+    END
+    ELSE
+    BEGIN SET @fail += 1 PRINT '  FAIL: ' + @ntName + ' does not exist' END
+    SET @total += 1
+    FETCH NEXT FROM nt_cursor INTO @ntName, @ntExpCols
 END
-CLOSE v_cursor
-DEALLOCATE v_cursor
+CLOSE nt_cursor
+DEALLOCATE nt_cursor
+
+-- =========================================
+-- SECTION 5: Dropped Tables (10 NTM tables should NOT exist)
+-- =========================================
 
 PRINT ''
+PRINT '--- Section 5: Dropped Table Checks ---'
 
--- =============================================
--- 7. Verify stored procedures exist
--- =============================================
-PRINT '--- Verifying stored procedures ---'
+DECLARE @droppedTables TABLE (TableName nvarchar(128))
+INSERT INTO @droppedTables VALUES
+    ('NtmCountry'), ('NtmNotification'), ('NtmSubject'), ('NtmUser'),
+    ('Imported_Tariff'), ('Law_ConditionMeasure'), ('Law_RelatedLaw'),
+    ('Snapshot_Law'), ('Snapshot_Law_ConditionMeasure'), ('Snapshot_Law_RelatedLaw')
 
-DECLARE @spNames TABLE (SpName NVARCHAR(200))
-INSERT INTO @spNames VALUES
-    ('sp_auditRecord_dynamic_search'), ('sp_entityincharge_dynamic_search'),
-    ('sp_genericrequirement_dynamic_search'), ('sp_law_dynamic_search'),
-    ('sp_media_dynamic_search'), ('sp_menu_dynamic_search'),
-    ('sp_partner_dynamic_search'), ('sp_personincharge_dynamic_search'),
-    ('sp_recourse_dynamic_search'), ('sp_regulation_dynamic_search'),
-    ('sp_requirement_dynamic_search'), ('sp_translation_dynamic_search'),
-    ('sp_translation_menu_dynamic_search'), ('sp_unitincharge_dynamic_search'),
-    ('sp_xmlSerializedItem_dynamic_search'), ('sp_public_reviews_dynamic_search'),
-    ('sp_cost_variables_translation_search'), ('sp_filter_translation_search'),
-    ('sp_filteroption_translation_search'), ('sp_options_translation_search'),
-    ('sp_site_menu_translation_search'),
-    ('sp_feedback_menu_get_children'), ('sp_feedback_menu_get_first_level'),
-    ('sp_feedback_objective_get_children'), ('sp_feedback_objective_get_first_level'),
-    ('sp_on_published_block'), ('sp_on_published_step'), ('sp_on_published_recourse'),
-    ('sp_on_updated_unitInCharge'), ('sp_on_updated_media'),
-    ('sp_on_updated_entityInCharge'), ('sp_on_updated_genericRequirement'),
-    ('sp_on_updated_law'), ('sp_snapshot_getStep'),
-    ('sp_take_snapshot_objective'), ('sp_take_snapshot_step'),
-    ('sp_update_snapshot_block'), ('sp_update_snapshot_recourse'),
-    ('sp_update_snapshot_step')
+DECLARE @dtName nvarchar(128)
+DECLARE dt_cursor CURSOR FOR SELECT TableName FROM @droppedTables
+OPEN dt_cursor
+FETCH NEXT FROM dt_cursor INTO @dtName
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = @dtName AND type = 'U' AND schema_id = SCHEMA_ID('dbo'))
+    BEGIN SET @pass += 1 END
+    ELSE BEGIN SET @fail += 1 PRINT '  FAIL: ' + @dtName + ' still exists in dbo' END
+    SET @total += 1
+    FETCH NEXT FROM dt_cursor INTO @dtName
+END
+CLOSE dt_cursor
+DEALLOCATE dt_cursor
 
-DECLARE @spName NVARCHAR(200)
-DECLARE sp_cursor CURSOR FOR SELECT SpName FROM @spNames
+PRINT '  Dropped table checks complete'
+
+-- =========================================
+-- SECTION 6: Views (25 total expected)
+-- =========================================
+
+PRINT ''
+PRINT '--- Section 6: View Checks ---'
+
+DECLARE @viewCount int
+SELECT @viewCount = COUNT(*) FROM sys.views WHERE schema_id = SCHEMA_ID('dbo')
+IF @viewCount = 25
+BEGIN SET @pass += 1 PRINT '  PASS: 25 views exist' END
+ELSE BEGIN SET @fail += 1 PRINT '  FAIL: ' + CAST(@viewCount AS varchar(5)) + ' views exist (expected 25)' END
+SET @total += 1
+
+-- Specific view checks
+IF EXISTS (SELECT 1 FROM sys.views WHERE name = 'v_law')
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: v_law does not exist' END
+SET @total += 1
+
+IF EXISTS (SELECT 1 FROM sys.views WHERE name = 'v_public_review')
+BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: v_public_review does not exist' END
+SET @total += 1
+
+-- =========================================
+-- SECTION 7: Stored Procedures (3 new + 28 updated + 1 dropped)
+-- =========================================
+
+PRINT ''
+PRINT '--- Section 7: Stored Procedure Checks ---'
+
+-- 3 new SPs should exist
+DECLARE @newSPs TABLE (SPName nvarchar(128))
+INSERT INTO @newSPs VALUES
+    ('sp_on_updated_StepRequirement'),
+    ('sp_Public_GetFullReviews'),
+    ('sp_snapshot_getStepRequirementCosts')
+
+DECLARE @spName nvarchar(128)
+DECLARE sp_cursor CURSOR FOR SELECT SPName FROM @newSPs
 OPEN sp_cursor
 FETCH NEXT FROM sp_cursor INTO @spName
 WHILE @@FETCH_STATUS = 0
 BEGIN
-    IF NOT EXISTS (SELECT 1 FROM sys.objects WHERE name = @spName AND type = 'P')
-    BEGIN PRINT 'FAIL: Procedure ' + @spName + ' missing'; SET @errors = @errors + 1 END
-    ELSE PRINT 'OK: Procedure ' + @spName + ' exists'
+    IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = @spName)
+    BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: New SP ' + @spName + ' does not exist' END
+    SET @total += 1
     FETCH NEXT FROM sp_cursor INTO @spName
 END
 CLOSE sp_cursor
 DEALLOCATE sp_cursor
 
--- Verify sp_publish_legislation is dropped
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_publish_legislation' AND type = 'P')
-BEGIN PRINT 'FAIL: sp_publish_legislation still exists'; SET @errors = @errors + 1 END
-ELSE PRINT 'OK: sp_publish_legislation dropped'
+-- 28 updated SPs should exist
+DECLARE @updatedSPs TABLE (SPName nvarchar(128))
+INSERT INTO @updatedSPs VALUES
+    ('sp_feedback_menu_get_children'), ('sp_feedback_menu_get_first_level'),
+    ('sp_feedback_objective_get_children'), ('sp_feedback_objective_get_first_level'),
+    ('sp_on_updated_entityInCharge'), ('sp_on_updated_genericRequirement'),
+    ('sp_on_updated_law'), ('sp_on_updated_media'),
+    ('sp_on_updated_menu'), ('sp_on_updated_menu_tree'),
+    ('sp_on_updated_objective'), ('sp_on_updated_personInCharge'),
+    ('sp_on_updated_unitInCharge'), ('sp_snapshot_getStep'),
+    ('sp_snapshot_getStepEICs'), ('sp_snapshot_getStepRecourses'),
+    ('sp_snapshot_getStepRecourseUICs'), ('sp_snapshot_getStepRegionalEICs'),
+    ('sp_snapshot_getStepRegionalPICs'),
+    ('sp_snapshot_getStepRequirements'), ('sp_snapshot_getStepResults'),
+    ('sp_snapshot_getStepSectionVisibility'), ('sp_snapshot_getStepUICs'),
+    ('sp_take_snapshot_objective'), ('sp_take_snapshot_step'),
+    ('sp_update_snapshot_block'), ('sp_update_snapshot_recourse'),
+    ('sp_update_snapshot_step')
+
+DECLARE usp_cursor CURSOR FOR SELECT SPName FROM @updatedSPs
+OPEN usp_cursor
+FETCH NEXT FROM usp_cursor INTO @spName
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = @spName)
+    BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Updated SP ' + @spName + ' does not exist' END
+    SET @total += 1
+    FETCH NEXT FROM usp_cursor INTO @spName
+END
+CLOSE usp_cursor
+DEALLOCATE usp_cursor
+
+-- 1 dropped SP should NOT exist
+IF NOT EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_publish_legislation')
+BEGIN SET @pass += 1 PRINT '  PASS: sp_publish_legislation dropped' END
+ELSE BEGIN SET @fail += 1 PRINT '  FAIL: sp_publish_legislation still exists' END
+SET @total += 1
+
+-- =========================================
+-- SECTION 8: Foreign Key Constraints (6)
+-- =========================================
 
 PRINT ''
+PRINT '--- Section 8: Foreign Key Constraint Checks ---'
 
--- =============================================
--- 8. Verify foreign key constraints
--- =============================================
-PRINT '--- Verifying foreign keys ---'
+DECLARE @fkNames TABLE (FKName nvarchar(128))
+INSERT INTO @fkNames VALUES
+    ('FK_Admin_Step_Level'),
+    ('FK_EntityInCharge_Zone'),
+    ('FK_Admin_ObjectiveSectionVisibility_Objective'),
+    ('FK_FilterOption_Product_FilterOption'),
+    ('FK_GenericRequirement_Id'),
+    ('FK_Level_Id')
 
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Admin_ObjectiveSectionVisibility_Objective')
-BEGIN PRINT 'WARN: FK_Admin_ObjectiveSectionVisibility_Objective missing (may need parent table)' END
-ELSE PRINT 'OK: FK_Admin_ObjectiveSectionVisibility_Objective'
+DECLARE @fkName nvarchar(128)
+DECLARE fk_cursor CURSOR FOR SELECT FKName FROM @fkNames
+OPEN fk_cursor
+FETCH NEXT FROM fk_cursor INTO @fkName
+WHILE @@FETCH_STATUS = 0
+BEGIN
+    IF EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = @fkName)
+    BEGIN SET @pass += 1 END ELSE BEGIN SET @fail += 1 PRINT '  FAIL: FK ' + @fkName + ' does not exist' END
+    SET @total += 1
+    FETCH NEXT FROM fk_cursor INTO @fkName
+END
+CLOSE fk_cursor
+DEALLOCATE fk_cursor
 
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_FilterOption_Product_FilterOption')
-BEGIN PRINT 'WARN: FK_FilterOption_Product_FilterOption missing (may need parent table)' END
-ELSE PRINT 'OK: FK_FilterOption_Product_FilterOption'
-
-IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_GenericRequirement_Cost_GenericRequirement')
-BEGIN PRINT 'WARN: FK_GenericRequirement_Cost_GenericRequirement missing (may need parent table)' END
-ELSE PRINT 'OK: FK_GenericRequirement_Cost_GenericRequirement'
+-- =========================================
+-- SECTION 9: Backup Verification
+-- =========================================
 
 PRINT ''
+PRINT '--- Section 9: Backup Verification ---'
 
--- =============================================
--- Summary
--- =============================================
-PRINT '========================================='
-IF @errors = 0
-    PRINT 'VALIDATION PASSED: All checks successful'
+-- Law_PreSPA_Backup should exist
+IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Law_PreSPA_Backup' AND type = 'U')
+BEGIN SET @pass += 1 PRINT '  PASS: Law_PreSPA_Backup exists' END
+ELSE BEGIN SET @fail += 1 PRINT '  FAIL: Law_PreSPA_Backup does not exist' END
+SET @total += 1
+
+-- ntm_backup schema should exist
+IF EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'ntm_backup')
+BEGIN SET @pass += 1 PRINT '  PASS: ntm_backup schema exists' END
+ELSE BEGIN SET @fail += 1 PRINT '  FAIL: ntm_backup schema does not exist' END
+SET @total += 1
+
+-- =========================================
+-- SUMMARY
+-- =========================================
+
+PRINT ''
+PRINT '============================================='
+PRINT '  VALIDATION SUMMARY'
+PRINT '============================================='
+PRINT '  Total checks: ' + CAST(@total AS varchar(10))
+PRINT '  Passed:       ' + CAST(@pass AS varchar(10))
+PRINT '  Failed:       ' + CAST(@fail AS varchar(10))
+PRINT ''
+
+IF @fail = 0
+    PRINT '  RESULT: ALL CHECKS PASSED - Migration validated successfully!'
 ELSE
-    PRINT 'VALIDATION FAILED: ' + CAST(@errors AS VARCHAR) + ' error(s) found'
-PRINT '========================================='
+    PRINT '  RESULT: ' + CAST(@fail AS varchar(10)) + ' CHECK(S) FAILED - Review failures above'
+
+PRINT ''
+PRINT '  Finished at: ' + CONVERT(varchar(30), GETDATE(), 120)
+PRINT '============================================='
 GO

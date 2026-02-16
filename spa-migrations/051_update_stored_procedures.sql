@@ -1,957 +1,37 @@
 ﻿-- =============================================
--- Migration: 050_update_stored_procedures
+-- Migration: 051_update_stored_procedures
 -- Date: 2026-02-16
--- Description: Update 39 stored procedures to match SPA schema definitions.
---   Category 1: 16 dynamic search procedures (varchar -> nvarchar)
---   Category 2: 5 translation search procedures (varchar -> nvarchar + NULL i18n fallback)
---   Category 3: 4 feedback procedures (add IsVisibleToGuest filter)
---   Category 4: 3 published procedures (SystemLanguage reformatting)
---   Category 5: 2 column-aware procedures (new column support)
---   Category 6: 9 structurally changed procedures
+-- Description: Update 28 existing stored procedures to match SPA schema.
+--   Change categories:
+--   1. IsVisibleToGuest filter (6 procs)
+--   2. GoogleMapsURL + Zone_Id columns (6 procs)
+--   3. Admin_Step new columns: Level_Id, NumberOfUsers, Summary, IsReachingOffice (3 procs)
+--   4. GenericRequirement_NumberOfPages column (4 procs)
+--   5. Snapshot_StepRequirementCost table sync (4 procs)
+--   6. i18n-aware media handling with ISNULL fallback (7 procs)
+--   7. OnlineStepURL logic (1 proc)
+--   8. IsSummaryVisible column (1 proc)
+--   SP bodies extracted verbatim from new-spa-structure.sql (Libya).
+-- Execution: Run in SSMS against the old-structure database
+-- Dependencies: 050_create_new_stored_procedures.sql
 -- =============================================
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_auditRecord_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_auditRecord_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_auditRecord_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_auditRecord_dynamic_search]
-(
-	@noOfRows			int,
-	@lastIdProcessed	int,
-	@whereclause		nvarchar(4000),
-	@orderclause		nvarchar(1000)
-)
-as
-begin
 
 SET NOCOUNT ON;
 
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
+PRINT '=== Migration 051: Update Stored Procedures (28) ==='
+PRINT 'Started at: ' + CONVERT(varchar(30), GETDATE(), 120)
+PRINT ''
 
-set @strTable = ' v_auditRecord'
+-- =========================================
+-- 1/28. sp_feedback_menu_get_children
+-- =========================================
 
-IF (@noOfRows is not null)
-	set @strFields = ' top '+Convert(nvarchar, @noOfRows)+' * ' 
-ELSE 
-	set @strFields = ' * '
+PRINT '--- 1/28 Updating sp_feedback_menu_get_children ---'
 
-IF ( @lastIdProcessed is not null)
-	SET @strFilterCriteria = ' WHERE id < ' + Convert(nvarchar, @lastIdProcessed)
-ELSE 
-	SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	IF(@lastIdProcessed is not null)
-		SET  @strFilterCriteria = @strFilterCriteria+ ' AND '+ @whereclause +' '
-	ELSE 
-		SET  @strFilterCriteria = ' WHERE '+ @whereclause+' '
-ELSE 
-    SET  @strFilterCriteria = @strFilterCriteria+ ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY Id desc, ' + @orderclause
-ELSE
-      SET  @strSortCriteria = 'ORDER BY Id desc'
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_entityincharge_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_entityincharge_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_entityincharge_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_entityincharge_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_entityInCharge'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_genericrequirement_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_genericrequirement_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_genericrequirement_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_genericrequirement_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_genericrequirement'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_law_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_law_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_law_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_law_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_law'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_media_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_media_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_media_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_media_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_media'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_menu_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_menu_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_menu_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_menu_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_menu'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_partner_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_partner_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_partner_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_partner_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_partner'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_personincharge_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_personincharge_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_personincharge_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_personincharge_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_personInCharge'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_recourse_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_recourse_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_recourse_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_recourse_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_recourse'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_regulation_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_regulation_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_regulation_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_regulation_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_regulation'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_requirement_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_requirement_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_requirement_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_requirement_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_requirement'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_translation_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_translation_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_translation_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_translation_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_translation_item'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_translation_menu_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_translation_menu_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_translation_menu_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_translation_menu_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_translation_menu'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_unitincharge_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_unitincharge_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_unitincharge_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_unitincharge_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_unitInCharge'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_xmlSerializedItem_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_xmlSerializedItem_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_xmlSerializedItem_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_xmlSerializedItem_dynamic_search]
-(
-	@whereclause nvarchar(4000),
-	@orderclause nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-set @strFields = ' *' 
-set @strTable = ' v_xmlSerializedItem'
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	SET  @strFilterCriteria = ' WHERE ' + @whereclause
-ELSE
-      SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL ORDER BY CLAUSE
-IF ( @orderclause is not null AND len(ltrim(@orderclause)) > 0 ) 
-	SET  @strSortCriteria = ' ORDER BY ' + @orderclause
-ELSE
-      SET  @strSortCriteria = ''
-
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + ' with (nolock) ' + @strFilterCriteria + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 1: Dynamic search (varchar -> nvarchar)
--- Procedure: sp_public_reviews_dynamic_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_public_reviews_dynamic_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_public_reviews_dynamic_search]
-GO
-CREATE procedure [dbo].[sp_public_reviews_dynamic_search]
-(
-	@systemId			int,
-	@lang				nvarchar(10),
-	@whereclause		nvarchar(4000)='',
-	@noOfRows			int,
-	@lastIdProcessed	int
-)
-as
-begin
-
-SET NOCOUNT OFF
-
-declare @strFields nvarchar(4000)
-declare @strTable nvarchar(4000)
-declare @strFilterCriteria nvarchar(4000)
-declare @strSortCriteria nvarchar(4000)
-
-	
-set @strTable = ' v_public_review'
-
-
-IF (@noOfRows is not null)
-	set @strFields = ' top '+Convert(nvarchar, @noOfRows)+' * ' 
-ELSE 
-	set @strFields = ' * '
-
-
-IF ( @lastIdProcessed is not null)
-	SET @strFilterCriteria = ' WHERE ticketId < ' + Convert(nvarchar, @lastIdProcessed)
-ELSE 
-	SET  @strFilterCriteria = ''
-
--- ADD OPTIONAL WHERE CLAUSE
-IF ( @whereclause is not null AND len(ltrim(@whereclause)) > 0 ) 
-	IF (len(ltrim(@strFilterCriteria)) > 0 )
-		SET  @strFilterCriteria =@strFilterCriteria +' AND '+ @whereclause+' '
-	ELSE
-		SET  @strFilterCriteria = ' WHERE '+ @whereclause+' '
-ELSE 
-    SET  @strFilterCriteria = @strFilterCriteria+ ''
-
-
-SET  @strFilterCriteria = @strFilterCriteria+ ''
-
---ADD SYSTEM ID AND LANG FILTER
-IF ( @strFilterCriteria is not null AND len(ltrim(@strFilterCriteria)) > 0 )
-	 SET  @strFilterCriteria = @strFilterCriteria+ ' AND '+ ' SystemId= '+Convert(nvarchar, @systemId)  +' AND (lang =''hp'' or lang=''' + @lang +''' )'
-ELSE
-	SET  @strFilterCriteria =  ' WHERE SystemId= '+Convert(nvarchar, @systemId)  +' AND (lang =''hp'' or lang=''' + @lang +''' )'
-	
--- ORDER BY CLAUSE
-set @strSortCriteria=' ORDER BY ticketId desc'
-
-print ('SELECT' + @strFields + ' FROM' + @strTable + @strFilterCriteria  + @strSortCriteria)
-
--- EXECUTE BUILDED QUERY
-execute ('SELECT' + @strFields + ' FROM' + @strTable + @strFilterCriteria  + @strSortCriteria)
-
-end
-GO
-
--- =============================================
--- Category 2: Translation search (varchar -> nvarchar + NULL i18n fallback)
--- Procedure: sp_cost_variables_translation_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_cost_variables_translation_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_cost_variables_translation_search]
-GO
-CREATE procedure [dbo].[sp_cost_variables_translation_search]
-(
-	@translationLang nvarchar(5),
-	@searchLang nvarchar(5),
-	@search nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @searchTerm nvarchar(1000)
-
---make search term to lowercase
-set @searchTerm =lower(@search)
-
-SELECT 
-	o.Id, 
-	o.Label,
-	ISNULL(i.Label, o.Label) as TranslatedLabel
-FROM [dbo].[CostVariable] o
-LEFT JOIN  [dbo].[CostVariable_i18n] i
-	ON i.costVariable_Id=o.Id AND i.lang=@translationLang
-WHERE o.Deleted=0
-AND (( @searchLang is null and  LOWER(o.Label) LIKE N'%'+@searchTerm+ '%') or (i.Label is null and LOWER(o.Label) LIKE N'%'+@searchTerm+ '%') or LOWER(i.Label) like  N'%'+@searchTerm+ '%')
-ORDER BY o.Label, TranslatedLabel
-
-
-end
-GO
-
--- =============================================
--- Category 2: Translation search (varchar -> nvarchar + NULL i18n fallback)
--- Procedure: sp_filter_translation_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_filter_translation_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_filter_translation_search]
-GO
-CREATE procedure [dbo].[sp_filter_translation_search]
-(
-	@translationLang nvarchar(5),
-	@searchLang nvarchar(5),
-	@search nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @searchTerm nvarchar(1000)
-
---make search term to lowercase
-set @searchTerm =lower(@search)
-
-SELECT 
-	o.Id, 
-	o.Name,
-	ISNULL(i.Name, o.Name) as TranslatedName
-FROM [dbo].[Filter] o
-LEFT JOIN  [dbo].[Filter_i18n] i
-	ON i.Filter_Id = o.Id AND i.Lang=@translationLang
-WHERE o.Deleted=0
-AND (( @searchLang is null and  LOWER(o.Name) LIKE N'%'+@searchTerm+ '%') or (i.Name is null and LOWER(o.Name) LIKE N'%'+@searchTerm+ '%') or LOWER(i.Name) like  N'%'+@searchTerm+ '%')
-ORDER BY o.Name, TranslatedName
-
-
-end
-GO
-
--- =============================================
--- Category 2: Translation search (varchar -> nvarchar + NULL i18n fallback)
--- Procedure: sp_filteroption_translation_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_filteroption_translation_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_filteroption_translation_search]
-GO
-CREATE procedure [dbo].[sp_filteroption_translation_search]
-(
-	@translationLang nvarchar(5),
-	@searchLang nvarchar(5),
-	@search nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @searchTerm nvarchar(1000)
-
---make search term to lowercase
-set @searchTerm =lower(@search)
-
-SELECT 
-	o.Id, 
-	o.Name,
-	ISNULL(i.Name, o.Name) as TranslatedName
-FROM [dbo].[FilterOption] o
-LEFT JOIN  [dbo].[FilterOption_i18n] i
-	ON i.FilterOption_Id = o.Id AND i.Lang=@translationLang
-WHERE o.Deleted=0
-AND (( @searchLang is null and  LOWER(o.Name) LIKE N'%'+@searchTerm+ '%') or (i.Name is null and LOWER(o.Name) LIKE N'%'+@searchTerm+ '%') or LOWER(i.Name) like  N'%'+@searchTerm+ '%')
-ORDER BY o.Name, TranslatedName
-
-
-end
-GO
-
--- =============================================
--- Category 2: Translation search (varchar -> nvarchar + NULL i18n fallback)
--- Procedure: sp_options_translation_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_options_translation_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_options_translation_search]
-GO
-CREATE procedure [dbo].[sp_options_translation_search]
-(
-	@translationLang nvarchar(5),
-	@searchLang nvarchar(5),
-	@search nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @searchTerm nvarchar(1000)
-
---make search term to lowercase
-set @searchTerm =lower(@search)
-
-SELECT 
-	o.Id, 
-	o.Type,
-	o.Text,
-	ISNULL(i.Text, o.Text) as TranslatedText
-FROM [dbo].[Option] o
-LEFT JOIN  [dbo].[Option_i18n] i
-	ON i.optionId=o.Id AND i.lang=@translationLang
-WHERE o.Deleted=0
-AND o.Selected=1
-AND ((@searchLang is null and LOWER(o.Text) LIKE N'%'+@searchTerm+ '%') or (i.Text is null and LOWER(o.Text) LIKE N'%'+@searchTerm+ '%') or LOWER(i.Text) like  N'%'+@searchTerm+ '%')
-ORDER BY o.Text, TranslatedText
-
-
-end
-GO
-
--- =============================================
--- Category 2: Translation search (varchar -> nvarchar + NULL i18n fallback)
--- Procedure: sp_site_menu_translation_search
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_site_menu_translation_search' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_site_menu_translation_search]
-GO
-CREATE procedure [dbo].[sp_site_menu_translation_search]
-(
-	@translationLang nvarchar(5),
-	@searchLang nvarchar(5),
-	@search nvarchar(1000)
-)
-as
-begin
-
-SET NOCOUNT ON;
-
-declare @searchTerm nvarchar(1000)
-
---make search term to lowercase
-set @searchTerm =lower(@search)
-
-SELECT 
-	o.Id, 
-	o.Name,
-	ISNULL(i.Name, o.name) as TranslatedName
-FROM [dbo].[SiteMenu] o
-LEFT JOIN  [dbo].[SiteMenu_i18n] i
-	ON i.Menu_Id=o.Id AND i.lang=@translationLang
-	WHERE o.IsVisible=1
-AND (( @searchLang is null and  LOWER(o.Name) LIKE N'%'+@searchTerm+ '%') or (i.Name is null and LOWER(o.Name) LIKE N'%'+@searchTerm+ '%') or LOWER(i.Name) like  N'%'+@searchTerm+ '%')
-ORDER BY o.Name, TranslatedName
-
-
-end
-GO
-
--- =============================================
--- Category 3: Feedback (IsVisibleToGuest filter)
--- Procedure: sp_feedback_menu_get_children
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_feedback_menu_get_children' AND type = 'P')
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_feedback_menu_get_children')
     DROP PROCEDURE [dbo].[sp_feedback_menu_get_children]
 GO
+
 CREATE PROCEDURE [dbo].[sp_feedback_menu_get_children]
 (
 	@menuId int,
@@ -974,13 +54,19 @@ BEGIN
 END
 GO
 
--- =============================================
--- Category 3: Feedback (IsVisibleToGuest filter)
--- Procedure: sp_feedback_menu_get_first_level
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_feedback_menu_get_first_level' AND type = 'P')
+PRINT '  Updated sp_feedback_menu_get_children'
+GO
+
+-- =========================================
+-- 2/28. sp_feedback_menu_get_first_level
+-- =========================================
+
+PRINT '--- 2/28 Updating sp_feedback_menu_get_first_level ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_feedback_menu_get_first_level')
     DROP PROCEDURE [dbo].[sp_feedback_menu_get_first_level]
 GO
+
 CREATE PROCEDURE [dbo].[sp_feedback_menu_get_first_level]
 (
 	@lang char(2)
@@ -1002,13 +88,19 @@ BEGIN
 END
 GO
 
--- =============================================
--- Category 3: Feedback (IsVisibleToGuest filter)
--- Procedure: sp_feedback_objective_get_children
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_feedback_objective_get_children' AND type = 'P')
+PRINT '  Updated sp_feedback_menu_get_first_level'
+GO
+
+-- =========================================
+-- 3/28. sp_feedback_objective_get_children
+-- =========================================
+
+PRINT '--- 3/28 Updating sp_feedback_objective_get_children ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_feedback_objective_get_children')
     DROP PROCEDURE [dbo].[sp_feedback_objective_get_children]
 GO
+
 CREATE PROCEDURE [dbo].[sp_feedback_objective_get_children]
 (
 	@menuId int,
@@ -1031,13 +123,19 @@ BEGIN
 END
 GO
 
--- =============================================
--- Category 3: Feedback (IsVisibleToGuest filter)
--- Procedure: sp_feedback_objective_get_first_level
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_feedback_objective_get_first_level' AND type = 'P')
+PRINT '  Updated sp_feedback_objective_get_children'
+GO
+
+-- =========================================
+-- 4/28. sp_feedback_objective_get_first_level
+-- =========================================
+
+PRINT '--- 4/28 Updating sp_feedback_objective_get_first_level ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_feedback_objective_get_first_level')
     DROP PROCEDURE [dbo].[sp_feedback_objective_get_first_level]
 GO
+
 CREATE PROCEDURE [dbo].[sp_feedback_objective_get_first_level]
 (
 	@lang char(2)
@@ -1059,343 +157,19 @@ BEGIN
 END
 GO
 
--- =============================================
--- Category 4: Published (SystemLanguage reformatting)
--- Procedure: sp_on_published_block
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_published_block' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_on_published_block]
-GO
-CREATE PROCEDURE [dbo].[sp_on_published_block]
-(
-	@blockId int
-)
-AS
-BEGIN
-
-SET NOCOUNT ON
-
-DECLARE @langPrincipal varchar(2)
-SET @langPrincipal = (SELECT TOP 1 code FROM SystemLanguage WHERE IsPrincipal = 1) 
-
--- get all the registry for objectives where this block exists
-DECLARE @registryId int, @objectiveId int
-
--- get all the blocks in the snapshot tables
-DECLARE blocks_cursor CURSOR FOR 
-	SELECT DISTINCT sb.registry_id, sb.objective_id
-	FROM dbo.Snapshot_Block sb with(nolock)
-	WHERE sb.id = @blockId 
-	AND sb.registry_id IN (SELECT sreg.id FROM Snapshot_Registry sreg with(nolock) WHERE sreg.IsCurrent = 1)
-	AND sb.lang = @langPrincipal
-
-OPEN blocks_cursor
-
-FETCH NEXT FROM blocks_cursor
-INTO @registryId, @objectiveId
-WHILE @@FETCH_STATUS = 0
-BEGIN 
-	-- call the procedure for populating the public tables 
-	if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[sp_populate_public_data_procedure]') and OBJECTPROPERTY(id, N'IsProcedure') = 1)  
-	exec [dbo].[sp_populate_public_data_procedure] @registryId, @objectiveId
-
-
-	FETCH NEXT FROM blocks_cursor
-	INTO @registryId, @objectiveId
-END
-	
-CLOSE blocks_cursor
-DEALLOCATE blocks_cursor
-
-SET NOCOUNT OFF
-END
+PRINT '  Updated sp_feedback_objective_get_first_level'
 GO
 
--- =============================================
--- Category 4: Published (SystemLanguage reformatting)
--- Procedure: sp_on_published_step
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_published_step' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_on_published_step]
-GO
-CREATE PROCEDURE [dbo].[sp_on_published_step]
-(
-	@stepId int
-)
-AS
-BEGIN
+-- =========================================
+-- 5/28. sp_on_updated_entityInCharge
+-- =========================================
 
-SET NOCOUNT ON
+PRINT '--- 5/28 Updating sp_on_updated_entityInCharge ---'
 
-DECLARE @langPrincipal varchar(2)
-SET @langPrincipal = (SELECT TOP 1 code FROM SystemLanguage WHERE IsPrincipal = 1) 
-
--- get all the registry for objectives where this steps exists
-DECLARE @registryId int, @objectiveId int
-
--- get all the steps in the snapshot tables
-DECLARE step_cursor CURSOR FOR 
-	SELECT DISTINCT ss.registry_id, ss.objective_id
-	FROM dbo.Snapshot_Step ss with(nolock)
-	WHERE ss.id = @stepId AND ss.IsRecourse = 0
-	AND ss.registry_id IN (SELECT sreg.id FROM Snapshot_Registry sreg with(nolock) WHERE sreg.IsCurrent = 1)
-	AND ss.lang = @langPrincipal
-
-OPEN step_cursor
-
-FETCH NEXT FROM step_cursor
-INTO @registryId, @objectiveId
-WHILE @@FETCH_STATUS = 0
-BEGIN 
-	-- call the procedure for populating the public tables 
-	if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[sp_populate_public_data_procedure]') and OBJECTPROPERTY(id, N'IsProcedure') = 1)  
-	exec [dbo].[sp_populate_public_data_procedure] @registryId, @objectiveId
-
-
-	FETCH NEXT FROM step_cursor
-	INTO @registryId, @objectiveId
-END
-	
-CLOSE step_cursor
-DEALLOCATE step_cursor
-
-SET NOCOUNT OFF
-END
-GO
-
--- =============================================
--- Category 4: Published (SystemLanguage reformatting)
--- Procedure: sp_on_published_recourse
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_published_recourse' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_on_published_recourse]
-GO
-CREATE PROCEDURE [dbo].[sp_on_published_recourse]
-(
-	@recourseId int
-)
-AS
-BEGIN
-
-SET NOCOUNT ON
-
-DECLARE @langPrincipal varchar(2)
-SET @langPrincipal = (SELECT TOP 1 entity_lang FROM community_lang WHERE lang_principal = 1)
-
--- get all the registry for objectives where this steps exists
-DECLARE @registryId int, @objectiveId int
-
--- get all the recourses in the snapshot tables
-DECLARE recourse_cursor CURSOR FOR 
-	SELECT DISTINCT sr.registry_id, sr.objective_id
-	FROM dbo.Snapshot_Step sr 
-	WHERE sr.id = @recourseId AND sr.IsRecourse = 1
-	AND sr.registry_id IN (SELECT sreg.id FROM Snapshot_Registry sreg with(nolock) WHERE sreg.IsCurrent = 1)
-	AND sr.lang = @langPrincipal	
-
-OPEN recourse_cursor
-
-FETCH NEXT FROM recourse_cursor
-INTO @registryId, @objectiveId
-WHILE @@FETCH_STATUS = 0
-BEGIN 
-	-- call the procedure for populating the public tables 
-	if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[sp_populate_public_data_procedure]') and OBJECTPROPERTY(id, N'IsProcedure') = 1)  
-	exec [dbo].[sp_populate_public_data_procedure] @registryId, @objectiveId
-
-
-	FETCH NEXT FROM recourse_cursor
-	INTO @registryId, @objectiveId
-END
-	
-CLOSE recourse_cursor
-DEALLOCATE recourse_cursor
-
-SET NOCOUNT OFF
-END
-GO
-
--- =============================================
--- Category 5: Column-aware (new column support)
--- Procedure: sp_on_updated_unitInCharge
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_updated_unitInCharge' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_on_updated_unitInCharge]
-GO
-CREATE PROCEDURE [dbo].[sp_on_updated_unitInCharge]
-(
-	@unitInChargeId int
-)
-AS
-BEGIN
-
-SET NOCOUNT ON
-
--- update the snapshot table
-UPDATE suic
-	SET 
-	suic.[Name]  = isnull(uic_i18n.Name, uic.Name)
-       ,suic.[Image] = uic.[Image]  
-       ,suic.[ScheduleIsInherited] = uic.[ScheduleIsInherited]  	
-       ,suic.[ScheduleDay1MorningStart] = uic.[ScheduleDay1MorningStart]   
-       ,suic.[ScheduleDay1MorningEnd] = uic.[ScheduleDay1MorningEnd] 
-       ,suic.[ScheduleDay1EveningStart] = uic.[ScheduleDay1EveningStart] 
-       ,suic.[ScheduleDay1EveningEnd] = uic.[ScheduleDay1EveningEnd] 
-       ,suic.[ScheduleDay1IsClosed] = uic.[ScheduleDay1IsClosed] 
-       ,suic.[ScheduleDay1IsNotAvailable] = uic.[ScheduleDay1IsNotAvailable]  
-       ,suic.[ScheduleDay2MorningStart] = uic.[ScheduleDay2MorningStart]  
-       ,suic.[ScheduleDay2MorningEnd] = uic.[ScheduleDay2MorningEnd] 
-       ,suic.[ScheduleDay2EveningStart] = uic.[ScheduleDay2EveningStart] 
-       ,suic.[ScheduleDay2EveningEnd] = uic.[ScheduleDay2EveningEnd] 
-       ,suic.[ScheduleDay2IsClosed] = uic.[ScheduleDay2IsClosed] 
-       ,suic.[ScheduleDay2IsNotAvailable] = uic.[ScheduleDay2IsNotAvailable] 
-       ,suic.[ScheduleDay3MorningStart] = uic.[ScheduleDay3MorningStart]  
-       ,suic.[ScheduleDay3MorningEnd] = uic.[ScheduleDay3MorningEnd]  
-       ,suic.[ScheduleDay3EveningStart] = uic.[ScheduleDay3EveningStart]  
-       ,suic.[ScheduleDay3EveningEnd] = uic.[ScheduleDay3EveningEnd]  
-       ,suic.[ScheduleDay3IsClosed] = uic.[ScheduleDay3IsClosed]   
-       ,suic.[ScheduleDay3IsNotAvailable] = uic.[ScheduleDay3IsNotAvailable]  
-       ,suic.[ScheduleDay4MorningStart] = uic.[ScheduleDay4MorningStart]  
-       ,suic.[ScheduleDay4MorningEnd] = uic.[ScheduleDay4MorningEnd]  
-       ,suic.[ScheduleDay4EveningStart] = uic.[ScheduleDay4EveningStart]  
-       ,suic.[ScheduleDay4EveningEnd] = uic.[ScheduleDay4EveningEnd] 
-       ,suic.[ScheduleDay4IsClosed] = uic.[ScheduleDay4IsClosed]  
-       ,suic.[ScheduleDay4IsNotAvailable]= uic.[ScheduleDay4IsNotAvailable]   
-       ,suic.[ScheduleDay5MorningStart] = uic.[ScheduleDay5MorningStart]  
-       ,suic.[ScheduleDay5MorningEnd] = uic.[ScheduleDay5MorningEnd] 
-       ,suic.[ScheduleDay5EveningStart] = uic.[ScheduleDay5EveningStart] 
-       ,suic.[ScheduleDay5EveningEnd] = uic.[ScheduleDay5EveningEnd] 
-       ,suic.[ScheduleDay5IsClosed] = uic.[ScheduleDay5IsClosed] 
-       ,suic.[ScheduleDay5IsNotAvailable] = uic.[ScheduleDay5IsNotAvailable] 
-       ,suic.[ScheduleDay6MorningStart] = uic.[ScheduleDay6MorningStart] 
-       ,suic.[ScheduleDay6MorningEnd] = uic.[ScheduleDay6MorningEnd] 
-       ,suic.[ScheduleDay6EveningStart] = uic.[ScheduleDay6EveningStart] 
-       ,suic.[ScheduleDay6EveningEnd] = uic.[ScheduleDay6EveningEnd] 
-       ,suic.[ScheduleDay6IsClosed] = uic.[ScheduleDay6IsClosed] 
-       ,suic.[ScheduleDay6IsNotAvailable] = uic.[ScheduleDay6IsNotAvailable] 
-       ,suic.[ScheduleDay7MorningStart] = uic.[ScheduleDay7MorningStart] 
-       ,suic.[ScheduleDay7MorningEnd] = uic.[ScheduleDay7MorningEnd] 
-       ,suic.[ScheduleDay7EveningStart] = uic.[ScheduleDay7EveningStart]  
-       ,suic.[ScheduleDay7EveningEnd] = uic.[ScheduleDay7EveningEnd]  
-       ,suic.[ScheduleDay7IsClosed] = uic.[ScheduleDay7IsClosed]  
-       ,suic.[ScheduleDay7IsNotAvailable] = uic.[ScheduleDay7IsNotAvailable]   
-       ,suic.[ScheduleComments] = ISNULL(uic_i18n.[ScheduleComments], uic.[ScheduleComments])   
-       ,suic.[Website] = ISNULL(uic_i18n.[Website], uic.[Website]) 
-
-FROM Snapshot_StepUnitInCharge suic
-	INNER JOIN UnitInCharge uic on suic.Id = uic.Id
-		LEFT JOIN UnitInCharge_i18n uic_i18n on uic.id = uic_i18n.Parent_Id and [suic].Lang = uic_i18n.Lang
-WHERE suic.Id = @unitInChargeId
-AND suic.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
-
--- update the snapshot recourse table
-UPDATE ruic
-	SET 
-	ruic.[Name]  = isnull(uic_i18n.Name, uic.Name)
-       ,ruic.[Image] = uic.[Image]  
-       ,ruic.[ScheduleIsInherited] = uic.[ScheduleIsInherited]  	
-       ,ruic.[ScheduleDay1MorningStart] = uic.[ScheduleDay1MorningStart]   
-       ,ruic.[ScheduleDay1MorningEnd] = uic.[ScheduleDay1MorningEnd] 
-       ,ruic.[ScheduleDay1EveningStart] = uic.[ScheduleDay1EveningStart] 
-       ,ruic.[ScheduleDay1EveningEnd] = uic.[ScheduleDay1EveningEnd] 
-       ,ruic.[ScheduleDay1IsClosed] = uic.[ScheduleDay1IsClosed] 
-       ,ruic.[ScheduleDay1IsNotAvailable] = uic.[ScheduleDay1IsNotAvailable]  
-       ,ruic.[ScheduleDay2MorningStart] = uic.[ScheduleDay2MorningStart]  
-       ,ruic.[ScheduleDay2MorningEnd] = uic.[ScheduleDay2MorningEnd] 
-       ,ruic.[ScheduleDay2EveningStart] = uic.[ScheduleDay2EveningStart] 
-       ,ruic.[ScheduleDay2EveningEnd] = uic.[ScheduleDay2EveningEnd] 
-       ,ruic.[ScheduleDay2IsClosed] = uic.[ScheduleDay2IsClosed] 
-       ,ruic.[ScheduleDay2IsNotAvailable] = uic.[ScheduleDay2IsNotAvailable] 
-       ,ruic.[ScheduleDay3MorningStart] = uic.[ScheduleDay3MorningStart]  
-       ,ruic.[ScheduleDay3MorningEnd] = uic.[ScheduleDay3MorningEnd]  
-       ,ruic.[ScheduleDay3EveningStart] = uic.[ScheduleDay3EveningStart]  
-       ,ruic.[ScheduleDay3EveningEnd] = uic.[ScheduleDay3EveningEnd]  
-       ,ruic.[ScheduleDay3IsClosed] = uic.[ScheduleDay3IsClosed]   
-       ,ruic.[ScheduleDay3IsNotAvailable] = uic.[ScheduleDay3IsNotAvailable]  
-       ,ruic.[ScheduleDay4MorningStart] = uic.[ScheduleDay4MorningStart]  
-       ,ruic.[ScheduleDay4MorningEnd] = uic.[ScheduleDay4MorningEnd]  
-       ,ruic.[ScheduleDay4EveningStart] = uic.[ScheduleDay4EveningStart]  
-       ,ruic.[ScheduleDay4EveningEnd] = uic.[ScheduleDay4EveningEnd] 
-       ,ruic.[ScheduleDay4IsClosed] = uic.[ScheduleDay4IsClosed]  
-       ,ruic.[ScheduleDay4IsNotAvailable]= uic.[ScheduleDay4IsNotAvailable]   
-       ,ruic.[ScheduleDay5MorningStart] = uic.[ScheduleDay5MorningStart]  
-       ,ruic.[ScheduleDay5MorningEnd] = uic.[ScheduleDay5MorningEnd] 
-       ,ruic.[ScheduleDay5EveningStart] = uic.[ScheduleDay5EveningStart] 
-       ,ruic.[ScheduleDay5EveningEnd] = uic.[ScheduleDay5EveningEnd] 
-       ,ruic.[ScheduleDay5IsClosed] = uic.[ScheduleDay5IsClosed] 
-       ,ruic.[ScheduleDay5IsNotAvailable] = uic.[ScheduleDay5IsNotAvailable] 
-       ,ruic.[ScheduleDay6MorningStart] = uic.[ScheduleDay6MorningStart] 
-       ,ruic.[ScheduleDay6MorningEnd] = uic.[ScheduleDay6MorningEnd] 
-       ,ruic.[ScheduleDay6EveningStart] = uic.[ScheduleDay6EveningStart] 
-       ,ruic.[ScheduleDay6EveningEnd] = uic.[ScheduleDay6EveningEnd] 
-       ,ruic.[ScheduleDay6IsClosed] = uic.[ScheduleDay6IsClosed] 
-       ,ruic.[ScheduleDay6IsNotAvailable] = uic.[ScheduleDay6IsNotAvailable] 
-       ,ruic.[ScheduleDay7MorningStart] = uic.[ScheduleDay7MorningStart] 
-       ,ruic.[ScheduleDay7MorningEnd] = uic.[ScheduleDay7MorningEnd] 
-       ,ruic.[ScheduleDay7EveningStart] = uic.[ScheduleDay7EveningStart]  
-       ,ruic.[ScheduleDay7EveningEnd] = uic.[ScheduleDay7EveningEnd]  
-       ,ruic.[ScheduleDay7IsClosed] = uic.[ScheduleDay7IsClosed]  
-       ,ruic.[ScheduleDay7IsNotAvailable] = uic.[ScheduleDay7IsNotAvailable]   
-       ,ruic.[ScheduleComments] = ISNULL(uic_i18n.[ScheduleComments], uic.[ScheduleComments])
-       ,ruic.[Website] = ISNULL(uic_i18n.[Website], uic.[Website]) 
-
-FROM Snapshot_StepRecourseUnitInCharge ruic
-	INNER JOIN UnitInCharge uic on ruic.Id = uic.Id
-		LEFT JOIN UnitInCharge_i18n uic_i18n on uic.id = uic_i18n.Parent_Id and ruic.Lang = uic_i18n.Lang
-WHERE ruic.Id = @unitInChargeId
-AND ruic.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
-
-
-SET NOCOUNT OFF
-END
-GO
-
--- =============================================
--- Category 5: Column-aware (new column support)
--- Procedure: sp_on_updated_media
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_updated_media' AND type = 'P')
-    DROP PROCEDURE [dbo].[sp_on_updated_media]
-GO
-CREATE PROCEDURE [dbo].[sp_on_updated_media]
-(
-	@mediaId int
-)
-AS
-BEGIN
-
-SET NOCOUNT ON
-
--- update the snapshot table
-UPDATE som 
-	SET som.Media_Id = m.Id,
-		som.Media_Name = isnull(m_i18n.Name, m.Name),
-		som.Media_FileName = isnull(m_i18n.FileName, m.FileName),
-		som.Media_Extention = isnull(m_i18n.Extention, m.Extention),
-		som.Media_Length = isnull(m_i18n.Length, m.Length),
-		som.Media_PreviewImageName = isnull(m_i18n.PreviewImageName, m.PreviewImageName),
-		som.Media_IsDocumentPresent = m.IsDocumentPresent
-	FROM Snapshot_Object_Media som
-			INNER JOIN Media m on som.[Media_Id] = m.[Id]
-				LEFT JOIN Media_i18n m_i18n on m.Id = m_i18n.Media_Id AND m_i18n.Lang = som.Lang		
-	WHERE som.[Media_Id] = @mediaId
-	AND som.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
-
--- call the procedure for populating the public tables 
-if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[Public_Generate_ALL]') and OBJECTPROPERTY(id, N'IsProcedure') = 1)  
-exec [dbo].[Public_Generate_ALL]
-
-SET NOCOUNT OFF
-END
-GO
-
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_on_updated_entityInCharge
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_updated_entityInCharge' AND type = 'P')
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_entityInCharge')
     DROP PROCEDURE [dbo].[sp_on_updated_entityInCharge]
 GO
+
 CREATE PROCEDURE [dbo].[sp_on_updated_entityInCharge]
 (
 	@entityInChargeId int
@@ -1634,13 +408,19 @@ SET NOCOUNT OFF
 END
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_on_updated_genericRequirement
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_updated_genericRequirement' AND type = 'P')
+PRINT '  Updated sp_on_updated_entityInCharge'
+GO
+
+-- =========================================
+-- 6/28. sp_on_updated_genericRequirement
+-- =========================================
+
+PRINT '--- 6/28 Updating sp_on_updated_genericRequirement ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_genericRequirement')
     DROP PROCEDURE [dbo].[sp_on_updated_genericRequirement]
 GO
+
 CREATE PROCEDURE [dbo].[sp_on_updated_genericRequirement]
 (
 	@genericRequirementId int
@@ -1656,8 +436,7 @@ SET ssr.GenericRequirement_Name = isnull(gr_i18n.Name, gr.Name),
 	ssr.GenericRequirement_Description = isnull(gr_i18n.Description, gr.Description),
 	ssr.GenericRequirement_Type = gr.Type,
 	ssr.GenericRequirement_IsDocumentPresent = gr.IsDocumentPresent,
-	ssr.GenericRequirement_NumberOfPages = gr.NumberOfPages,
-	ssr.GenericRequirement_IsEmittedByInstitution = gr.IsEmittedByInstitution
+	ssr.GenericRequirement_NumberOfPages = gr.NumberOfPages
 FROM Snapshot_StepRequirement ssr
 	INNER JOIN GenericRequirement gr on ssr.GenericRequirement_Id = gr.Id
 		LEFT JOIN GenericRequirement_i18n gr_i18n on gr.id = gr_i18n.Parent_Id and [ssr].Lang = gr_i18n.Lang
@@ -1861,13 +640,19 @@ SET NOCOUNT OFF
 END
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_on_updated_law
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_on_updated_law' AND type = 'P')
+PRINT '  Updated sp_on_updated_genericRequirement'
+GO
+
+-- =========================================
+-- 7/28. sp_on_updated_law
+-- =========================================
+
+PRINT '--- 7/28 Updating sp_on_updated_law ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_law')
     DROP PROCEDURE [dbo].[sp_on_updated_law]
 GO
+
 CREATE PROCEDURE [dbo].[sp_on_updated_law]
 (
 	@lawId int
@@ -2019,13 +804,424 @@ SET NOCOUNT OFF
 END
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_snapshot_getStep
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_snapshot_getStep' AND type = 'P')
+PRINT '  Updated sp_on_updated_law'
+GO
+
+-- =========================================
+-- 8/28. sp_on_updated_media
+-- =========================================
+
+PRINT '--- 8/28 Updating sp_on_updated_media ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_media')
+    DROP PROCEDURE [dbo].[sp_on_updated_media]
+GO
+
+CREATE PROCEDURE [dbo].[sp_on_updated_media]
+(
+	@mediaId int
+)
+AS
+BEGIN
+
+SET NOCOUNT ON
+
+-- update the snapshot table
+UPDATE som 
+	SET som.Media_Id = m.Id,
+		som.Media_Name = isnull(m_i18n.Name, m.Name),
+		som.Media_FileName = isnull(m_i18n.FileName, m.FileName),
+		som.Media_Extention = isnull(m_i18n.Extention, m.Extention),
+		som.Media_Length = isnull(m_i18n.Length, m.Length),
+		som.Media_PreviewImageName = isnull(m_i18n.PreviewImageName, m.PreviewImageName),
+		som.Media_IsDocumentPresent = m.IsDocumentPresent
+	FROM Snapshot_Object_Media som
+			INNER JOIN Media m on som.[Media_Id] = m.[Id]
+				LEFT JOIN Media_i18n m_i18n on m.Id = m_i18n.Media_Id AND m_i18n.Lang = som.Lang		
+	WHERE som.[Media_Id] = @mediaId
+	AND som.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
+
+-- call the procedure for populating the public tables 
+if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[Public_Generate_ALL]') and OBJECTPROPERTY(id, N'IsProcedure') = 1)  
+exec [dbo].[Public_Generate_ALL]
+
+SET NOCOUNT OFF
+END
+GO
+
+PRINT '  Updated sp_on_updated_media'
+GO
+
+-- =========================================
+-- 9/28. sp_on_updated_menu
+-- =========================================
+
+PRINT '--- 9/28 Updating sp_on_updated_menu ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_menu')
+    DROP PROCEDURE [dbo].[sp_on_updated_menu]
+GO
+
+CREATE PROCEDURE [dbo].[sp_on_updated_menu]
+(
+	@menuId int
+)
+AS
+BEGIN
+
+SET NOCOUNT ON
+
+-- call the procedure for populating the public tables 
+if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[sp_populate_public_data_menu]') and OBJECTPROPERTY(id, N'IsProcedure') = 1)  
+exec [dbo].[sp_populate_public_data_menu] @menuId
+
+SET NOCOUNT OFF
+END
+GO
+
+PRINT '  Updated sp_on_updated_menu'
+GO
+
+-- =========================================
+-- 10/28. sp_on_updated_menu_tree
+-- =========================================
+
+PRINT '--- 10/28 Updating sp_on_updated_menu_tree ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_menu_tree')
+    DROP PROCEDURE [dbo].[sp_on_updated_menu_tree]
+GO
+
+CREATE PROCEDURE [dbo].[sp_on_updated_menu_tree]
+AS
+BEGIN
+
+SET NOCOUNT ON
+
+-- call the procedure for populating the public tables 
+if exists (select * from dbo.sysobjects where id = object_id(N'[dbo].[sp_populate_public_data_menu]') and OBJECTPROPERTY(id, N'IsProcedure') = 1)  
+exec [dbo].[sp_populate_public_data_menu] null
+
+SET NOCOUNT OFF
+END
+GO
+
+PRINT '  Updated sp_on_updated_menu_tree'
+GO
+
+-- =========================================
+-- 11/28. sp_on_updated_objective
+-- =========================================
+
+PRINT '--- 11/28 Updating sp_on_updated_objective ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_objective')
+    DROP PROCEDURE [dbo].[sp_on_updated_objective]
+GO
+
+CREATE PROCEDURE [dbo].[sp_on_updated_objective]
+
+AS
+BEGIN
+
+SET NOCOUNT ON
+delete from Public_Objective_Filter;
+
+
+--the inherited filters
+
+With Inherited As 
+( 
+     Select e.ChildId, e.ParentId, e.lang, e.ChildIsVisible, e.IsVisibleToGuest, e.IsFilterSearchResult, 0 as Depth, e.[Order]
+	From [dbo].[v_public_objective_tree] e
+	 where e.ChildIsInRecycleBin = 0 and e.ParentIsInRecycleBin= 0
+    Union All 
+    Select  e2.ChildId, Inherited.ParentId, e2.lang,e2.ChildIsVisible, e2.IsVisibleToGuest,e2.IsFilterSearchResult,Depth + 1,  Inherited.[Order]
+    From  [dbo].[v_public_objective_tree] e2 
+		
+         Join Inherited 
+            On Inherited.ChildId = e2.ParentId 
+			where e2.ChildIsInRecycleBin = 0 and e2.ParentIsInRecycleBin= 0 and e2.lang = Inherited.lang
+) 
+--the inherited filters
+insert into Public_Objective_Filter  ([Objective_Id]
+           ,[Parent_Id]
+           ,[IsVisible]
+           ,[IsVisibleToGuest]
+		   ,[IsSearchResult]
+           ,[lang]
+           ,[Filter_Id]
+           ,[FilterOption_Id]
+		   ,[Depth]
+		   ,[Depth_Order])
+select v.* from (
+SELECT 
+		o.ChildId as Objective_Id,
+		o.ParentId as Parent_Id,
+		o.ChildIsVisible as IsVisible,
+		o.IsVisibleToGuest,
+		o.IsFilterSearchResult,
+		o.lang,
+		objf.Filter_Id,
+		objf.FilterOption_Id,
+		o.Depth,
+		o.[Order]
+		FROM Inherited o
+		LEFT JOIN (
+			SELECT 
+			f.Objective_Id,
+			f.Filter_Id,
+			op.FilterOption_Id 
+			FROM  [dbo].[Objective_FilterOption] op
+				INNER JOIN [dbo].[Objective_Filter] f 
+					on f.Id = op.Objective_filter_Id and f.IsActive= 1 and f.IsEnabled = 1
+		) objf on objf.Objective_Id = o.ParentId 
+		
+
+UNION ALL
+-- the own filters
+	SELECT 
+		o.ChildId as Objective_Id,
+		o.ParentId as Parent_Id,
+		o.ChildIsVisible as IsVisible,
+		o.IsVisibleToGuest,
+		o.IsFilterSearchResult,
+		o.lang,
+		objf.Filter_Id,
+		objf.FilterOption_Id,
+		0,
+		o.[Order]
+		FROM [dbo].[v_public_objective_tree] o
+		INNER JOIN (
+			SELECT 
+			f.Objective_Id,
+			f.Filter_Id,
+			op.FilterOption_Id 
+			FROM  [dbo].[Objective_FilterOption] op
+				INNER JOIN [dbo].[Objective_Filter] f 
+					on f.Id = op.Objective_filter_Id and f.IsActive= 1 and f.IsEnabled = 1
+		) objf on objf.Objective_Id = o.ChildId
+		where o.ChildIsInRecycleBin = 0 and o.ParentIsInRecycleBin = 0 ) as V
+
+END
+GO
+
+PRINT '  Updated sp_on_updated_objective'
+GO
+
+-- =========================================
+-- 12/28. sp_on_updated_personInCharge
+-- =========================================
+
+PRINT '--- 12/28 Updating sp_on_updated_personInCharge ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_personInCharge')
+    DROP PROCEDURE [dbo].[sp_on_updated_personInCharge]
+GO
+
+CREATE PROCEDURE [dbo].[sp_on_updated_personInCharge]
+(
+	@personInChargeId int
+)
+AS
+BEGIN
+
+SET NOCOUNT ON
+
+-- update the snapshot table
+UPDATE spic
+	SET 
+		spic.[Name]  = isnull(pic_i18n.Name, pic.Name)
+       ,spic.[Profession] = ISNULL(pic_i18n.[Profession], pic.[Profession]) 
+       ,spic.[Phone1] = pic.[Phone1] 
+       ,spic.[Phone2] = pic.[Phone2] 
+       ,spic.[Email1] = pic.[Email1] 
+       ,spic.[Email2] = pic.[Email2] 
+       ,spic.[Image] = pic.[Image]         
+
+FROM Snapshot_StepPersonInCharge spic
+	INNER JOIN PersonInCharge pic on spic.Id = pic.Id
+		LEFT JOIN PersonInCharge_i18n pic_i18n on pic.id = pic_i18n.Parent_Id and [spic].Lang = pic_i18n.Lang
+WHERE spic.Id = @personInChargeId
+AND spic.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
+
+
+-- update the snapshot recourse table
+UPDATE rpic
+	SET 
+		rpic.[Name]  = isnull(pic_i18n.Name, pic.Name)
+       ,rpic.[Profession] = ISNULL(pic_i18n.[Profession], pic.[Profession]) 
+       ,rpic.[Phone1] = pic.[Phone1] 
+       ,rpic.[Phone2] = pic.[Phone2] 
+       ,rpic.[Email1] = pic.[Email1] 
+       ,rpic.[Email2] = pic.[Email2] 
+       ,rpic.[Image] = pic.[Image]         
+
+FROM Snapshot_StepRecoursePersonInCharge rpic
+	INNER JOIN PersonInCharge pic on rpic.Id = pic.Id
+		LEFT JOIN PersonInCharge_i18n pic_i18n on pic.id = pic_i18n.Parent_Id and rpic.Lang = pic_i18n.Lang
+WHERE rpic.Id = @personInChargeId
+AND rpic.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
+
+
+SET NOCOUNT OFF
+END
+GO
+
+PRINT '  Updated sp_on_updated_personInCharge'
+GO
+
+-- =========================================
+-- 13/28. sp_on_updated_unitInCharge
+-- =========================================
+
+PRINT '--- 13/28 Updating sp_on_updated_unitInCharge ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_on_updated_unitInCharge')
+    DROP PROCEDURE [dbo].[sp_on_updated_unitInCharge]
+GO
+
+CREATE PROCEDURE [dbo].[sp_on_updated_unitInCharge]
+(
+	@unitInChargeId int
+)
+AS
+BEGIN
+
+SET NOCOUNT ON
+
+-- update the snapshot table
+UPDATE suic
+	SET 
+	suic.[Name]  = isnull(uic_i18n.Name, uic.Name)
+       ,suic.[Image] = uic.[Image]  
+       ,suic.[ScheduleIsInherited] = uic.[ScheduleIsInherited]  	
+       ,suic.[ScheduleDay1MorningStart] = uic.[ScheduleDay1MorningStart]   
+       ,suic.[ScheduleDay1MorningEnd] = uic.[ScheduleDay1MorningEnd] 
+       ,suic.[ScheduleDay1EveningStart] = uic.[ScheduleDay1EveningStart] 
+       ,suic.[ScheduleDay1EveningEnd] = uic.[ScheduleDay1EveningEnd] 
+       ,suic.[ScheduleDay1IsClosed] = uic.[ScheduleDay1IsClosed] 
+       ,suic.[ScheduleDay1IsNotAvailable] = uic.[ScheduleDay1IsNotAvailable]  
+       ,suic.[ScheduleDay2MorningStart] = uic.[ScheduleDay2MorningStart]  
+       ,suic.[ScheduleDay2MorningEnd] = uic.[ScheduleDay2MorningEnd] 
+       ,suic.[ScheduleDay2EveningStart] = uic.[ScheduleDay2EveningStart] 
+       ,suic.[ScheduleDay2EveningEnd] = uic.[ScheduleDay2EveningEnd] 
+       ,suic.[ScheduleDay2IsClosed] = uic.[ScheduleDay2IsClosed] 
+       ,suic.[ScheduleDay2IsNotAvailable] = uic.[ScheduleDay2IsNotAvailable] 
+       ,suic.[ScheduleDay3MorningStart] = uic.[ScheduleDay3MorningStart]  
+       ,suic.[ScheduleDay3MorningEnd] = uic.[ScheduleDay3MorningEnd]  
+       ,suic.[ScheduleDay3EveningStart] = uic.[ScheduleDay3EveningStart]  
+       ,suic.[ScheduleDay3EveningEnd] = uic.[ScheduleDay3EveningEnd]  
+       ,suic.[ScheduleDay3IsClosed] = uic.[ScheduleDay3IsClosed]   
+       ,suic.[ScheduleDay3IsNotAvailable] = uic.[ScheduleDay3IsNotAvailable]  
+       ,suic.[ScheduleDay4MorningStart] = uic.[ScheduleDay4MorningStart]  
+       ,suic.[ScheduleDay4MorningEnd] = uic.[ScheduleDay4MorningEnd]  
+       ,suic.[ScheduleDay4EveningStart] = uic.[ScheduleDay4EveningStart]  
+       ,suic.[ScheduleDay4EveningEnd] = uic.[ScheduleDay4EveningEnd] 
+       ,suic.[ScheduleDay4IsClosed] = uic.[ScheduleDay4IsClosed]  
+       ,suic.[ScheduleDay4IsNotAvailable]= uic.[ScheduleDay4IsNotAvailable]   
+       ,suic.[ScheduleDay5MorningStart] = uic.[ScheduleDay5MorningStart]  
+       ,suic.[ScheduleDay5MorningEnd] = uic.[ScheduleDay5MorningEnd] 
+       ,suic.[ScheduleDay5EveningStart] = uic.[ScheduleDay5EveningStart] 
+       ,suic.[ScheduleDay5EveningEnd] = uic.[ScheduleDay5EveningEnd] 
+       ,suic.[ScheduleDay5IsClosed] = uic.[ScheduleDay5IsClosed] 
+       ,suic.[ScheduleDay5IsNotAvailable] = uic.[ScheduleDay5IsNotAvailable] 
+       ,suic.[ScheduleDay6MorningStart] = uic.[ScheduleDay6MorningStart] 
+       ,suic.[ScheduleDay6MorningEnd] = uic.[ScheduleDay6MorningEnd] 
+       ,suic.[ScheduleDay6EveningStart] = uic.[ScheduleDay6EveningStart] 
+       ,suic.[ScheduleDay6EveningEnd] = uic.[ScheduleDay6EveningEnd] 
+       ,suic.[ScheduleDay6IsClosed] = uic.[ScheduleDay6IsClosed] 
+       ,suic.[ScheduleDay6IsNotAvailable] = uic.[ScheduleDay6IsNotAvailable] 
+       ,suic.[ScheduleDay7MorningStart] = uic.[ScheduleDay7MorningStart] 
+       ,suic.[ScheduleDay7MorningEnd] = uic.[ScheduleDay7MorningEnd] 
+       ,suic.[ScheduleDay7EveningStart] = uic.[ScheduleDay7EveningStart]  
+       ,suic.[ScheduleDay7EveningEnd] = uic.[ScheduleDay7EveningEnd]  
+       ,suic.[ScheduleDay7IsClosed] = uic.[ScheduleDay7IsClosed]  
+       ,suic.[ScheduleDay7IsNotAvailable] = uic.[ScheduleDay7IsNotAvailable]   
+       ,suic.[ScheduleComments] = ISNULL(uic_i18n.[ScheduleComments], uic.[ScheduleComments])   
+       ,suic.[Website] = ISNULL(uic_i18n.[Website], uic.[Website]) 
+
+FROM Snapshot_StepUnitInCharge suic
+	INNER JOIN UnitInCharge uic on suic.Id = uic.Id
+		LEFT JOIN UnitInCharge_i18n uic_i18n on uic.id = uic_i18n.Parent_Id and [suic].Lang = uic_i18n.Lang
+WHERE suic.Id = @unitInChargeId
+AND suic.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
+
+-- update the snapshot recourse table
+UPDATE ruic
+	SET 
+	ruic.[Name]  = isnull(uic_i18n.Name, uic.Name)
+       ,ruic.[Image] = uic.[Image]  
+       ,ruic.[ScheduleIsInherited] = uic.[ScheduleIsInherited]  	
+       ,ruic.[ScheduleDay1MorningStart] = uic.[ScheduleDay1MorningStart]   
+       ,ruic.[ScheduleDay1MorningEnd] = uic.[ScheduleDay1MorningEnd] 
+       ,ruic.[ScheduleDay1EveningStart] = uic.[ScheduleDay1EveningStart] 
+       ,ruic.[ScheduleDay1EveningEnd] = uic.[ScheduleDay1EveningEnd] 
+       ,ruic.[ScheduleDay1IsClosed] = uic.[ScheduleDay1IsClosed] 
+       ,ruic.[ScheduleDay1IsNotAvailable] = uic.[ScheduleDay1IsNotAvailable]  
+       ,ruic.[ScheduleDay2MorningStart] = uic.[ScheduleDay2MorningStart]  
+       ,ruic.[ScheduleDay2MorningEnd] = uic.[ScheduleDay2MorningEnd] 
+       ,ruic.[ScheduleDay2EveningStart] = uic.[ScheduleDay2EveningStart] 
+       ,ruic.[ScheduleDay2EveningEnd] = uic.[ScheduleDay2EveningEnd] 
+       ,ruic.[ScheduleDay2IsClosed] = uic.[ScheduleDay2IsClosed] 
+       ,ruic.[ScheduleDay2IsNotAvailable] = uic.[ScheduleDay2IsNotAvailable] 
+       ,ruic.[ScheduleDay3MorningStart] = uic.[ScheduleDay3MorningStart]  
+       ,ruic.[ScheduleDay3MorningEnd] = uic.[ScheduleDay3MorningEnd]  
+       ,ruic.[ScheduleDay3EveningStart] = uic.[ScheduleDay3EveningStart]  
+       ,ruic.[ScheduleDay3EveningEnd] = uic.[ScheduleDay3EveningEnd]  
+       ,ruic.[ScheduleDay3IsClosed] = uic.[ScheduleDay3IsClosed]   
+       ,ruic.[ScheduleDay3IsNotAvailable] = uic.[ScheduleDay3IsNotAvailable]  
+       ,ruic.[ScheduleDay4MorningStart] = uic.[ScheduleDay4MorningStart]  
+       ,ruic.[ScheduleDay4MorningEnd] = uic.[ScheduleDay4MorningEnd]  
+       ,ruic.[ScheduleDay4EveningStart] = uic.[ScheduleDay4EveningStart]  
+       ,ruic.[ScheduleDay4EveningEnd] = uic.[ScheduleDay4EveningEnd] 
+       ,ruic.[ScheduleDay4IsClosed] = uic.[ScheduleDay4IsClosed]  
+       ,ruic.[ScheduleDay4IsNotAvailable]= uic.[ScheduleDay4IsNotAvailable]   
+       ,ruic.[ScheduleDay5MorningStart] = uic.[ScheduleDay5MorningStart]  
+       ,ruic.[ScheduleDay5MorningEnd] = uic.[ScheduleDay5MorningEnd] 
+       ,ruic.[ScheduleDay5EveningStart] = uic.[ScheduleDay5EveningStart] 
+       ,ruic.[ScheduleDay5EveningEnd] = uic.[ScheduleDay5EveningEnd] 
+       ,ruic.[ScheduleDay5IsClosed] = uic.[ScheduleDay5IsClosed] 
+       ,ruic.[ScheduleDay5IsNotAvailable] = uic.[ScheduleDay5IsNotAvailable] 
+       ,ruic.[ScheduleDay6MorningStart] = uic.[ScheduleDay6MorningStart] 
+       ,ruic.[ScheduleDay6MorningEnd] = uic.[ScheduleDay6MorningEnd] 
+       ,ruic.[ScheduleDay6EveningStart] = uic.[ScheduleDay6EveningStart] 
+       ,ruic.[ScheduleDay6EveningEnd] = uic.[ScheduleDay6EveningEnd] 
+       ,ruic.[ScheduleDay6IsClosed] = uic.[ScheduleDay6IsClosed] 
+       ,ruic.[ScheduleDay6IsNotAvailable] = uic.[ScheduleDay6IsNotAvailable] 
+       ,ruic.[ScheduleDay7MorningStart] = uic.[ScheduleDay7MorningStart] 
+       ,ruic.[ScheduleDay7MorningEnd] = uic.[ScheduleDay7MorningEnd] 
+       ,ruic.[ScheduleDay7EveningStart] = uic.[ScheduleDay7EveningStart]  
+       ,ruic.[ScheduleDay7EveningEnd] = uic.[ScheduleDay7EveningEnd]  
+       ,ruic.[ScheduleDay7IsClosed] = uic.[ScheduleDay7IsClosed]  
+       ,ruic.[ScheduleDay7IsNotAvailable] = uic.[ScheduleDay7IsNotAvailable]   
+       ,ruic.[ScheduleComments] = ISNULL(uic_i18n.[ScheduleComments], uic.[ScheduleComments])
+       ,ruic.[Website] = ISNULL(uic_i18n.[Website], uic.[Website]) 
+
+FROM Snapshot_StepRecourseUnitInCharge ruic
+	INNER JOIN UnitInCharge uic on ruic.Id = uic.Id
+		LEFT JOIN UnitInCharge_i18n uic_i18n on uic.id = uic_i18n.Parent_Id and ruic.Lang = uic_i18n.Lang
+WHERE ruic.Id = @unitInChargeId
+AND ruic.[Registry_Id] in (select id from Snapshot_Registry where IsCurrent = 1)
+
+
+SET NOCOUNT OFF
+END
+GO
+
+PRINT '  Updated sp_on_updated_unitInCharge'
+GO
+
+-- =========================================
+-- 14/28. sp_snapshot_getStep
+-- =========================================
+
+PRINT '--- 14/28 Updating sp_snapshot_getStep ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStep')
     DROP PROCEDURE [dbo].[sp_snapshot_getStep]
 GO
+
 CREATE PROCEDURE [dbo].[sp_snapshot_getStep]
 (
 	@registryId int,
@@ -2072,13 +1268,306 @@ AND ss.IsRecourse = 0
 AND ss.Lang = @lang
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_take_snapshot_objective
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_take_snapshot_objective' AND type = 'P')
+PRINT '  Updated sp_snapshot_getStep'
+GO
+
+-- =========================================
+-- 15/28. sp_snapshot_getStepEICs
+-- =========================================
+
+PRINT '--- 15/28 Updating sp_snapshot_getStepEICs ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepEICs')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepEICs]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepEICs]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepEntityInCharge with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepEICs'
+GO
+
+-- =========================================
+-- 16/28. sp_snapshot_getStepRecourses
+-- =========================================
+
+PRINT '--- 16/28 Updating sp_snapshot_getStepRecourses ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepRecourses')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepRecourses]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepRecourses]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_Step with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId
+AND IsRecourse = 1 
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepRecourses'
+GO
+
+-- =========================================
+-- 17/28. sp_snapshot_getStepRecourseUICs
+-- =========================================
+
+PRINT '--- 17/28 Updating sp_snapshot_getStepRecourseUICs ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepRecourseUICs')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepRecourseUICs]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepRecourseUICs]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepRecourseUnitInCharge with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepRecourseUICs'
+GO
+
+-- =========================================
+-- 18/28. sp_snapshot_getStepRegionalEICs
+-- =========================================
+
+PRINT '--- 18/28 Updating sp_snapshot_getStepRegionalEICs ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepRegionalEICs')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepRegionalEICs]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepRegionalEICs]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepRegionalEntityInCharge with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepRegionalEICs'
+GO
+
+-- =========================================
+-- 19/28. sp_snapshot_getStepRegionalPICs
+-- =========================================
+
+PRINT '--- 19/28 Updating sp_snapshot_getStepRegionalPICs ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepRegionalPICs')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepRegionalPICs]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepRegionalPICs]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepRegionalPersonInCharge with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepRegionalPICs'
+GO
+
+-- =========================================
+-- 20/28. sp_snapshot_getStepRequirements
+-- =========================================
+
+PRINT '--- 20/28 Updating sp_snapshot_getStepRequirements ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepRequirements')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepRequirements]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepRequirements]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepRequirement with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId 
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepRequirements'
+GO
+
+-- =========================================
+-- 21/28. sp_snapshot_getStepResults
+-- =========================================
+
+PRINT '--- 21/28 Updating sp_snapshot_getStepResults ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepResults')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepResults]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepResults]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepResult with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId 
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepResults'
+GO
+
+-- =========================================
+-- 22/28. sp_snapshot_getStepSectionVisibility
+-- =========================================
+
+PRINT '--- 22/28 Updating sp_snapshot_getStepSectionVisibility ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepSectionVisibility')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepSectionVisibility]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepSectionVisibility]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepSectionVisibility with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId
+GO
+
+PRINT '  Updated sp_snapshot_getStepSectionVisibility'
+GO
+
+-- =========================================
+-- 23/28. sp_snapshot_getStepUICs
+-- =========================================
+
+PRINT '--- 23/28 Updating sp_snapshot_getStepUICs ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_snapshot_getStepUICs')
+    DROP PROCEDURE [dbo].[sp_snapshot_getStepUICs]
+GO
+
+CREATE PROCEDURE [dbo].[sp_snapshot_getStepUICs]
+(
+	@registryId int,
+	@blockId int,
+	@stepId int,
+	@lang varchar(2)
+)
+AS
+SET NOCOUNT ON
+
+SELECT * 
+FROM Snapshot_StepUnitInCharge with (nolock)
+WHERE 
+Registry_Id = @registryId
+AND Block_Id = @blockId
+AND Step_Id = @stepId
+AND Lang = @lang
+GO
+
+PRINT '  Updated sp_snapshot_getStepUICs'
+GO
+
+-- =========================================
+-- 24/28. sp_take_snapshot_objective
+-- =========================================
+
+PRINT '--- 24/28 Updating sp_take_snapshot_objective ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_take_snapshot_objective')
     DROP PROCEDURE [dbo].[sp_take_snapshot_objective]
 GO
+
 CREATE PROCEDURE [dbo].[sp_take_snapshot_objective]
 (
 	@objectiveId int,
@@ -2144,7 +1633,7 @@ DECLARE @langPrincipal varchar(2)
 SET @langPrincipal = (SELECT TOP 1 code FROM SystemLanguage WHERE IsPrincipal = 1)
 
 /* 5. add new entry for each lang in Snaphot_Objective */
-INSERT INTO [dbo].[Snapshot_Objective]([Registry_Id],[Id],[Lang],[Name],[AdditionalInfo])
+INSERT INTO [dbo].[Snapshot_Objective]([Registry_Id],[Id],[Lang],[Name],[AdditionalInfo],[ExplanatoryText])
 SELECT @registryId, o.Id, o.lang,
 	CASE 
 		WHEN o.lang = @langPrincipal THEN o.Name
@@ -2153,11 +1642,15 @@ SELECT @registryId, o.Id, o.lang,
 	CASE 
 		WHEN o.lang = @langPrincipal THEN o.AdditionalInfo
 		ELSE ISNULL(o_i18n.[AdditionalInfo], o.[AdditionalInfo])
-	END AS [AdditionalInfo]
-FROM (SELECT l.code AS lang, [Id], o.[Name], o.[AdditionalInfo] FROM Admin_Objective o WITH(NOLOCK), SystemLanguage l) o
-	LEFT JOIN Admin_Objective_i18n o_i18n WITH(NOLOCK) ON o.[lang] = o_i18n.[lang] and o.[Id] = o_i18n.[Parent_Id]
-	LEFT JOIN Admin_ObjectivePerLangVisibility mvis WITH(NOLOCK) on o.Id = mvis.Objective_Id AND o.lang = mvis.Lang
-WHERE o.[Id] = @objectiveId AND mvis.Visible = 1
+	END AS [AdditionalInfo],
+	CASE 
+		WHEN o.lang = @langPrincipal THEN o.ExplanatoryText
+		ELSE ISNULL(o_i18n.[ExplanatoryText], o.[ExplanatoryText])
+	END AS [ExplanatoryText]
+FROM (SELECT l.code AS lang, [Id], o.[Name], o.[AdditionalInfo], o.[ExplanatoryText] FROM Admin_Objective o WITH(NOLOCK), SystemLanguage l) o
+		LEFT JOIN Admin_Objective_i18n o_i18n WITH(NOLOCK) ON o.[lang] = o_i18n.[lang] and o.[Id] = o_i18n.[Parent_Id]
+		LEFT JOIN Admin_ObjectivePerLangVisibility mvis WITH(NOLOCK) on o.Id = mvis.Objective_Id AND o.lang = mvis.Lang
+WHERE o.[Id] = @objectiveId AND mvis.Visible = 1 
 
 -- insert the attachments for the objective additional info  
 INSERT INTO [dbo].[Snapshot_Object_Media]([Registry_Id],[Objective_Id],[Block_Id],[Step_Id],[Lang]  
@@ -2205,7 +1698,8 @@ INSERT INTO [dbo].[Snapshot_ObjectiveSectionVisibility]([Registry_Id],[Objective
        ,[IsTimeframeVisible]  
        ,[IsLegalJustificationVisible]  
        ,[IsAdditionalInfoVisible]  
-       ,[IsAdministrativeBurdenVisible])  
+       ,[IsAdministrativeBurdenVisible]
+	   ,[IsAllSectionsVisible])  
  SELECT @registryId, @objectiveId
    ,[IsExpectedResultsVisible]  
    ,[IsEntitiesInChargeVisible]  
@@ -2215,6 +1709,7 @@ INSERT INTO [dbo].[Snapshot_ObjectiveSectionVisibility]([Registry_Id],[Objective
    ,[IsLegalJustificationVisible]  
    ,[IsAdditionalInfoVisible]  
    ,[IsAdministrativeBurdenVisible]
+   ,[IsAllSectionsVisible]
 FROM [dbo].[Admin_ObjectiveSectionVisibility]  
 WHERE Objective_Id = @objectiveId  
 
@@ -2301,7 +1796,8 @@ BEGIN
 		   ,[SnapshotDate]
 		   ,[Level_Id]
 		   ,[NumberOfUsers]
-		   ,[Summary])
+		   ,[Summary]
+		   ,[IsReachingOffice])
 	SELECT @registryId, @objectiveId, @blockId, 
 			0, NULL, -- is no recourse, so the step_Id is NULL
 		    @stepOrder, @stepIsParallele, @stepIsAlternative,
@@ -2385,6 +1881,7 @@ BEGIN
 				WHEN s.lang = @langPrincipal THEN s.[Summary]
 				ELSE ISNULL(s_i18n.[Summary], s.[Summary])
 			END AS [Summary]
+			,s.[IsReachingOffice]
 	FROM 
 		(SELECT l.code as lang, s.* FROM [Admin_Step] s WITH(NOLOCK), SystemLanguage l) s
 			LEFT JOIN Admin_Step_i18n s_i18n WITH(NOLOCK) ON s.[lang] = s_i18n.[lang] and s.[Id] = s_i18n.[Parent_Id]
@@ -2423,13 +1920,19 @@ SET NOCOUNT OFF
 END
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_take_snapshot_step
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_take_snapshot_step' AND type = 'P')
+PRINT '  Updated sp_take_snapshot_objective'
+GO
+
+-- =========================================
+-- 25/28. sp_take_snapshot_step
+-- =========================================
+
+PRINT '--- 25/28 Updating sp_take_snapshot_step ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_take_snapshot_step')
     DROP PROCEDURE [dbo].[sp_take_snapshot_step]
 GO
+
 CREATE PROCEDURE [dbo].[sp_take_snapshot_step]  
 (  
  @registryId int,  
@@ -3600,8 +3103,8 @@ INSERT INTO [dbo].[Snapshot_StepRequirement]([Registry_Id],[Objective_Id],[Block
        ,[Law_Name]  
        ,[Law_Description]  
        ,[Articles]
-	   ,[GenericRequirement_NumberOfPages]
-	   ,[GenericRequirement_IsEmittedByInstitution])  
+	     ,[GenericRequirement_NumberOfPages]
+	     ,[IsEmittedByInstitution])  
  SELECT @registryId, @objectiveId, @blockId, @stepId, sreq.[Order], sreq.[Id], sreq.lang  
    ,[AggregateOperator]  
    ,sreq.[Type]  
@@ -3638,7 +3141,7 @@ INSERT INTO [dbo].[Snapshot_StepRequirement]([Registry_Id],[Objective_Id],[Block
    ELSE ISNULL(sreq_i18n.[Articles], sreq.[Articles])  
     END AS [Articles]
    ,req.NumberOfPages as [GenericRequirement_NumberOfPages]
-   ,req.IsEmittedByInstitution as [GenericRequirement_IsEmittedByInstitution]
+   ,[IsEmittedByInstitution]
 FROM (SELECT l.code as lang, sreq.* FROM SystemLanguage l, [dbo].[Admin_StepRequirement] sreq WITH(NOLOCK)) sreq  
  LEFT JOIN [dbo].[Admin_StepRequirement_i18n] sreq_i18n WITH(NOLOCK) ON sreq.[Id] = sreq_i18n.[StepRequirement_Id] AND sreq.[lang] = sreq_i18n.[lang]  
  INNER JOIN (SELECT l.code as lang, req.* FROM SystemLanguage l, [dbo].[GenericRequirement] req WITH(NOLOCK)) req   
@@ -3777,7 +3280,8 @@ INSERT INTO [dbo].[Snapshot_StepRequirement]([Registry_Id],[Objective_Id],[Block
        ,[NbCopy]  
        ,[NbAuthenticated]  
        ,[Comments]  
-       ,[FilterGlobalOption])  
+       ,[FilterGlobalOption]
+       ,[IsEmittedByInstitution])  
  SELECT @registryId, @objectiveId, @blockId, @stepId, sreq.[Order], sreq.[Id], sreq.lang  
    ,[AggregateOperator]  
    ,sreq.[Type]  
@@ -3788,7 +3292,8 @@ INSERT INTO [dbo].[Snapshot_StepRequirement]([Registry_Id],[Objective_Id],[Block
    WHEN sreq.lang = @langPrincipal THEN sreq.[Comments]  
    ELSE ISNULL(sreq_i18n.[Comments], sreq.[Comments])  
   END AS [Comments]  
-   ,[FilterGlobalOption]  
+   ,[FilterGlobalOption]
+   ,[IsEmittedByInstitution]  
 FROM (SELECT l.code as lang, sreq.* FROM SystemLanguage l, [dbo].[Admin_StepRequirement] sreq WITH(NOLOCK)) sreq  
  LEFT JOIN [dbo].[Admin_StepRequirement_i18n] sreq_i18n WITH(NOLOCK) ON sreq.[Id] = sreq_i18n.[StepRequirement_Id] AND sreq.[lang] = sreq_i18n.[lang]  
 WHERE sreq.[Type] = 3 -- separator  
@@ -3980,16 +3485,22 @@ FROM [dbo].[Admin_StepSectionVisibility]
 WHERE Step_Id = @stepId  
   
    
-END
+END  
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_update_snapshot_block
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_update_snapshot_block' AND type = 'P')
+PRINT '  Updated sp_take_snapshot_step'
+GO
+
+-- =========================================
+-- 26/28. sp_update_snapshot_block
+-- =========================================
+
+PRINT '--- 26/28 Updating sp_update_snapshot_block ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_update_snapshot_block')
     DROP PROCEDURE [dbo].[sp_update_snapshot_block]
 GO
+
 CREATE PROCEDURE [dbo].[sp_update_snapshot_block]
 (
 	@blockId int,
@@ -4211,7 +3722,8 @@ BEGIN
 				   ,[SnapshotDate]
 				   ,[Level_Id]
 				   ,[NumberOfUsers]
-				   ,[Summary])
+				   ,[Summary]
+				   ,[IsReachingOffice])
 			SELECT @registryId, @objectiveId, @blockId, 
 					0, NULL, -- is no recourse, so the step_Id is NULL
 					@stepOrder, @stepIsParallele, @stepIsAlternative,
@@ -4295,6 +3807,7 @@ BEGIN
 						WHEN s.lang = @langPrincipal THEN s.[Summary]
 						ELSE ISNULL(s_i18n.[Summary], s.[Summary])
 					END AS [Summary]
+					,s.[IsReachingOffice]
 			FROM 
 				(SELECT l.code as lang, s.* FROM [Admin_Step] s WITH(NOLOCK), SystemLanguage l) s
 					LEFT JOIN Admin_Step_i18n s_i18n WITH(NOLOCK) ON s.[lang] = s_i18n.[lang] and s.[Id] = s_i18n.[Parent_Id]
@@ -4342,13 +3855,19 @@ SET NOCOUNT OFF
 END
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_update_snapshot_recourse
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_update_snapshot_recourse' AND type = 'P')
+PRINT '  Updated sp_update_snapshot_block'
+GO
+
+-- =========================================
+-- 27/28. sp_update_snapshot_recourse
+-- =========================================
+
+PRINT '--- 27/28 Updating sp_update_snapshot_recourse ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_update_snapshot_recourse')
     DROP PROCEDURE [dbo].[sp_update_snapshot_recourse]
 GO
+
 CREATE PROCEDURE [dbo].[sp_update_snapshot_recourse]
 (
 	@recourseId int,
@@ -4443,7 +3962,8 @@ BEGIN
 		   ,[Timeframe_Articles]
 		   ,[Level_Id]
 		   ,[NumberOfUsers]
-		   ,[Summary])
+		   ,[Summary]
+		   ,[IsReachingOffice])
 	SELECT @registryId, @objectiveId, @blockId, 
 			s.IsRecourse, @stepId, -- is recourse, get the parent = @stepId
 			@recourseOrder, 
@@ -4512,6 +4032,7 @@ BEGIN
 				WHEN s.lang = @langPrincipal THEN s.[Summary]
 				ELSE ISNULL(s_i18n.[Summary], s.[Summary])
 			END AS [Summary]
+			,s.[IsReachingOffice]
 	FROM 
 		(SELECT l.code as lang, s.* FROM [Admin_Step] s WITH(NOLOCK), SystemLanguage l) s
 			LEFT JOIN Admin_Step_i18n s_i18n WITH(NOLOCK) ON s.[lang] = s_i18n.[lang] and s.[Id] = s_i18n.[Parent_Id]
@@ -4546,13 +4067,19 @@ SET NOCOUNT OFF
 END
 GO
 
--- =============================================
--- Category 6: Major structural
--- Procedure: sp_update_snapshot_step
--- =============================================
-IF EXISTS (SELECT 1 FROM sys.objects WHERE name = 'sp_update_snapshot_step' AND type = 'P')
+PRINT '  Updated sp_update_snapshot_recourse'
+GO
+
+-- =========================================
+-- 28/28. sp_update_snapshot_step
+-- =========================================
+
+PRINT '--- 28/28 Updating sp_update_snapshot_step ---'
+
+IF EXISTS (SELECT 1 FROM sys.procedures WHERE name = 'sp_update_snapshot_step')
     DROP PROCEDURE [dbo].[sp_update_snapshot_step]
 GO
+
 CREATE PROCEDURE [dbo].[sp_update_snapshot_step]
 (
 	@stepId int,
@@ -4658,7 +4185,8 @@ BEGIN
 		   ,[SnapshotDate]
 		   ,[Level_Id]
 		   ,[NumberOfUsers]
-		   ,[Summary])
+		   ,[Summary]
+		   ,[IsReachingOffice])
 	SELECT @registryId, @objectiveId, @blockId, 
 			0, NULL, -- is no recourse, so the step_Id is NULL
 			@stepOrder, @stepIsParallele, @stepIsAlternative,
@@ -4742,6 +4270,7 @@ BEGIN
 				WHEN s.lang = @langPrincipal THEN s.[Summary]
 				ELSE ISNULL(s_i18n.[Summary], s.[Summary])
 			END AS [Summary]
+			,s.[IsReachingOffice]
 	FROM 
 		(SELECT l.code as lang, s.* FROM [Admin_Step] s WITH(NOLOCK), SystemLanguage l) s
 			LEFT JOIN Admin_Step_i18n s_i18n WITH(NOLOCK) ON s.[lang] = s_i18n.[lang] and s.[Id] = s_i18n.[Parent_Id]
@@ -4780,11 +4309,10 @@ SET NOCOUNT OFF
 END
 GO
 
--- =============================================
--- Verification
--- =============================================
-PRINT '========================================='
-PRINT 'Migration 050_update_stored_procedures completed successfully'
-PRINT 'Updated 39 stored procedures'
-PRINT '========================================='
+PRINT '  Updated sp_update_snapshot_step'
+GO
+
+PRINT ''
+PRINT '=== Migration 051 completed successfully ==='
+PRINT 'Finished at: ' + CONVERT(varchar(30), GETDATE(), 120)
 GO

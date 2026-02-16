@@ -3,7 +3,7 @@
 ## ADDED Requirements
 
 ### Requirement: In-Place Database Migration to SPA Schema
-The migration scripts SHALL modify an existing old-structure database in-place to match the SPA schema (Argentina/Lomas de Zamora instance), preserving all existing non-NTM data.
+The migration scripts SHALL modify an existing old-structure database in-place to match the SPA schema (Libya instance), preserving all existing non-NTM data.
 
 #### Scenario: Execute migration against old database
 - **WHEN** the migration scripts are executed in SSMS against an existing old-structure database
@@ -27,45 +27,116 @@ The migration scripts SHALL add new columns to existing tables to match the SPA 
   - `Level_Id` (int, NULL)
   - `NumberOfUsers` (int, NULL)
   - `Summary` (ntext, NULL)
+  - `IsReachingOffice` (bit, NULL)
 
 #### Scenario: Add Summary column to Admin_Step_i18n table
 - **WHEN** the migration script is executed on the old database
 - **THEN** the Admin_Step_i18n table SHALL have a new `Summary` (ntext, NULL) column
 
+#### Scenario: Add new column to Admin_StepRequirement table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Admin_StepRequirement table SHALL have a new `IsEmittedByInstitution` (bit, NOT NULL, DEFAULT 0) column
+
+#### Scenario: Add new column to Admin_StepSectionVisibility table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Admin_StepSectionVisibility table SHALL have a new `IsSummaryVisible` (bit, NOT NULL, DEFAULT 1) column
+
 #### Scenario: Add new column to EntityInCharge table
 - **WHEN** the migration script is executed on the old database
 - **THEN** the EntityInCharge table SHALL have a new `Zone_Id` (int, NULL) column
 
-#### Scenario: Add new columns to GenericRequirement table
-- **WHEN** the migration script is executed on the old database
-- **THEN** the GenericRequirement table SHALL have new columns:
-  - `IsEmittedByInstitution` (bit, NOT NULL, DEFAULT 0)
-  - `NumberOfPages` (int, NOT NULL, DEFAULT 0)
-
-#### Scenario: Add new column to UnitInCharge table
-- **WHEN** the migration script is executed on the old database
-- **THEN** the UnitInCharge table SHALL have a new `Website` (nvarchar, NULL) column
-
-#### Scenario: Add new columns to Media_i18n table
-- **WHEN** the migration script is executed on the old database
-- **THEN** the Media_i18n table SHALL have new columns:
-  - `FileName` (nvarchar, NULL)
-  - `Extention` (nvarchar, NULL)
-  - `Description` (ntext, NULL)
-  - `Length` (int, NULL)
-  - `PreviewImageName` (nvarchar, NULL)
-
 #### Scenario: Add new column to Feedback table
 - **WHEN** the migration script is executed on the old database
-- **THEN** the Feedback table SHALL have a new `Status` (int, NULL) column
+- **THEN** the Feedback table SHALL have a new `Status` (int, NOT NULL) column
 
 #### Scenario: Add new column to Filter table
 - **WHEN** the migration script is executed on the old database
 - **THEN** the Filter table SHALL have a new `IsProductRelated` (bit, NOT NULL, DEFAULT 0) column
 
-#### Scenario: Add new column to Admin_StepSectionVisibility table
+#### Scenario: Add new column to GenericRequirement table
 - **WHEN** the migration script is executed on the old database
-- **THEN** the Admin_StepSectionVisibility table SHALL have a new `IsSummaryVisible` (bit, NOT NULL, DEFAULT 1) column
+- **THEN** the GenericRequirement table SHALL have a new `NumberOfPages` (int, NOT NULL, DEFAULT 1) column
+
+#### Scenario: Add new columns to Media_i18n table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Media_i18n table SHALL have new columns:
+  - `FileName` (nvarchar(500), NULL)
+  - `Extention` (nvarchar(15), NULL)
+  - `Description` (ntext, NULL)
+  - `Length` (decimal(18,0), NULL)
+  - `PreviewImageName` (nvarchar(100), NULL)
+
+#### Scenario: Add new columns to Public_Team_Member table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Public_Team_Member table SHALL have new columns:
+  - `Phone` (nvarchar(50), NULL)
+  - `Email` (nvarchar(100), NULL)
+
+#### Scenario: Add new column to UnitInCharge table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the UnitInCharge table SHALL have a new `Website` (nvarchar(255), NULL) column
+
+#### Scenario: Add new column to UnitInCharge_i18n table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the UnitInCharge_i18n table SHALL have a new `Website` (nvarchar(255), NULL) column
+
+#### Scenario: Add new column to Snapshot_Objective table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_Objective table SHALL have a new `ExplanatoryText` (ntext, NULL) column
+
+#### Scenario: Add new columns to Snapshot_Step table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_Step table SHALL have new columns:
+  - `Level_Id` (int, NULL)
+  - `NumberOfUsers` (int, NULL)
+  - `Summary` (ntext, NULL)
+  - `IsReachingOffice` (bit, NULL)
+
+#### Scenario: Add new column to Snapshot_StepEntityInCharge table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepEntityInCharge table SHALL have a new `Zone_Id` (int, NULL) column
+
+#### Scenario: Add new column to Snapshot_StepRecourseEntityInCharge table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepRecourseEntityInCharge table SHALL have a new `Zone_Id` (int, NULL) column
+
+#### Scenario: Add new column to Snapshot_StepRecourseUnitInCharge table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepRecourseUnitInCharge table SHALL have a new `Website` (nvarchar(255), NULL) column
+
+#### Scenario: Add new columns to Snapshot_StepRegionalEntityInCharge table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepRegionalEntityInCharge table SHALL have new columns:
+  - `GoogleMapsURL` (nvarchar(800), NULL)
+  - `Zone_Id` (int, NULL)
+
+#### Scenario: Add new column to Snapshot_StepRegionalUnitInCharge table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepRegionalUnitInCharge table SHALL have a new `Website` (nvarchar(255), NULL) column
+
+#### Scenario: Add new columns to Snapshot_StepRequirement table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepRequirement table SHALL have new columns:
+  - `GenericRequirement_NumberOfPages` (int, NOT NULL, DEFAULT 1)
+  - `IsEmittedByInstitution` (bit, NOT NULL)
+
+#### Scenario: Add new column to Snapshot_StepSectionVisibility table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepSectionVisibility table SHALL have a new `IsSummaryVisible` (bit, NOT NULL) column
+
+#### Scenario: Add new column to Snapshot_StepUnitInCharge table
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Snapshot_StepUnitInCharge table SHALL have a new `Website` (nvarchar(255), NULL) column
+
+---
+
+### Requirement: Schema Column Type Modifications
+The migration scripts SHALL modify column types on existing tables to match the SPA schema.
+
+#### Scenario: Modify Feedback table columns
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Feedback table `Email` column SHALL be altered from nvarchar(30) to nvarchar(100)
+- **AND** the Feedback table `Type` column SHALL be altered from int NULL to int NOT NULL
 
 ---
 
@@ -78,9 +149,14 @@ The migration scripts SHALL remove columns from existing tables that are not pre
 - **AND** 53 NTM/legislation-related columns SHALL be removed from the Law table
 - **AND** the Law table SHALL retain only these columns: Id, Name, Description, IsDocumentPresent, CreatedDate, CreatedUser, ModifiedDate, ModifiedUser, OwnershipStatus, Deleted, DeprecatedID, IsVisibleInPublicDirectory
 
-#### Scenario: Remove column from Admin_Menu table
+#### Scenario: Remove IsLegislation from Snapshot_StepLaw
 - **WHEN** the migration script is executed on the old database
-- **THEN** the `IsVisibleInPublicHomePage` column SHALL be removed from Admin_Menu
+- **THEN** the `IsLegislation` column SHALL be removed from Snapshot_StepLaw
+
+#### Scenario: Admin_Menu table is NOT modified
+- **WHEN** the migration script is executed on the old database
+- **THEN** the Admin_Menu table SHALL NOT have any columns removed
+- **AND** the `IsVisibleInPublicHomePage` column SHALL remain (it exists in both old and SPA schemas)
 
 ---
 
@@ -89,19 +165,23 @@ The migration scripts SHALL create 5 new tables required by the SPA schema.
 
 #### Scenario: Create Admin_ObjectiveSectionVisibility table
 - **WHEN** the migration script is executed
-- **THEN** an `Admin_ObjectiveSectionVisibility` table SHALL be created with columns for objective-level section visibility control (10 columns including Id, Objective_Id, and 8 boolean visibility flags)
+- **THEN** an `Admin_ObjectiveSectionVisibility` table SHALL be created with 11 columns (Id, Objective_Id, IsExpectedResultsVisible, IsEntitiesInChargeVisible, IsRequirementsVisible, IsCostsVisible, IsTimeframeVisible, IsLegalJustificationVisible, IsAdditionalInfoVisible, IsAdministrativeBurdenVisible, IsAllSectionsVisible)
+
+#### Scenario: Create Snapshot_ObjectiveSectionVisibility table
+- **WHEN** the migration script is executed
+- **THEN** a `Snapshot_ObjectiveSectionVisibility` table SHALL be created with 11 columns (same as Admin but with Registry_Id instead of auto-increment Id)
 
 #### Scenario: Create GenericRequirement_Cost table
 - **WHEN** the migration script is executed
-- **THEN** a `GenericRequirement_Cost` table SHALL be created for cost tracking (11 columns including Type, Level_Id, TimeOfStaff, Automated)
+- **THEN** a `GenericRequirement_Cost` table SHALL be created for cost tracking (11 columns including Type, Level_Id, TimeOfStaff, Automated, GenericRequirement_Id)
 
 #### Scenario: Create FilterOption_Product table
 - **WHEN** the migration script is executed
-- **THEN** a `FilterOption_Product` table SHALL be created for product-level filtering (4 columns)
+- **THEN** a `FilterOption_Product` table SHALL be created for product-level filtering (4 columns: Id, FilterOption_Id, ProductCode, ProductName)
 
-#### Scenario: Create snapshot counterpart tables
+#### Scenario: Create Snapshot_StepRequirementCost table
 - **WHEN** the migration script is executed
-- **THEN** `Snapshot_ObjectiveSectionVisibility` and `Snapshot_StepRequirementCost` tables SHALL be created as snapshot counterparts
+- **THEN** a `Snapshot_StepRequirementCost` table SHALL be created (10 columns: Registry_Id, Objective_Id, Block_Id, Step_Id, Id, Type, Level_Id, TimeOfStaff, Automated, GenericRequirement_Id)
 
 ---
 
@@ -124,16 +204,8 @@ The migration scripts SHALL safely remove all NTM (Non-Tariff Measures) module t
 
 ---
 
-### Requirement: View Creation and Updates
-The migration scripts SHALL create 18 new views and update 2 existing views to match SPA schema definitions.
-
-#### Scenario: Create new views
-- **WHEN** the view creation script is executed
-- **THEN** 18 new views SHALL be created:
-  - `Public_Medias`, `view_Public_Menu_Mono`, `view_Public_Objectives_Current`, `view_Public_Regulations_Blocks`, `view_Public_Treeview_For_Summary`
-  - `view_sub_Public_Menu_Level1` through `view_sub_Public_Menu_Level5`
-  - `v_translation_item`, `Transfert`, `VIEW_step_dbl`
-  - `VIEW2`, `VIEW3`, `VIEW4`, `VIEW5`, `VIEW6`
+### Requirement: View Updates
+The migration scripts SHALL update 2 existing views to match SPA schema definitions.
 
 #### Scenario: Update v_law view
 - **WHEN** the view update script is executed
@@ -147,49 +219,74 @@ The migration scripts SHALL create 18 new views and update 2 existing views to m
 - **AND** the step tickets section SHALL use INNER JOIN instead of LEFT OUTER JOIN on Snapshot_Step
 - **AND** the "legislation tickets" UNION block SHALL be removed
 
+#### Scenario: No new views created
+- **WHEN** the migration is complete
+- **THEN** no new views SHALL have been created
+- **AND** the database SHALL have exactly 25 views (same as before migration)
+
+---
+
+### Requirement: New Stored Procedure Creation
+The migration scripts SHALL create 3 new stored procedures required by the SPA schema.
+
+#### Scenario: Create sp_on_updated_StepRequirement
+- **WHEN** the stored procedure creation script is executed
+- **THEN** `sp_on_updated_StepRequirement` SHALL be created with the SPA definition for syncing step requirement updates (IsEmittedByInstitution, NumberOfPages) to snapshots
+
+#### Scenario: Create sp_Public_GetFullReviews
+- **WHEN** the stored procedure creation script is executed
+- **THEN** `sp_Public_GetFullReviews` SHALL be created with the SPA definition for public review retrieval
+
+#### Scenario: Create sp_snapshot_getStepRequirementCosts
+- **WHEN** the stored procedure creation script is executed
+- **THEN** `sp_snapshot_getStepRequirementCosts` SHALL be created with the SPA definition for retrieving step requirement costs from snapshots
+
 ---
 
 ### Requirement: Stored Procedure Updates
-The migration scripts SHALL update 39 existing stored procedures to match SPA schema definitions.
+The migration scripts SHALL update 28 existing stored procedures to match SPA schema definitions.
 
-#### Scenario: Update dynamic search procedures for Unicode support
-- **WHEN** the stored procedure update script is executed
-- **THEN** 16 dynamic search procedures SHALL be updated to use `nvarchar` instead of `varchar` for parameters and variables:
-  - `sp_auditRecord_dynamic_search`, `sp_entityincharge_dynamic_search`, `sp_genericrequirement_dynamic_search`, `sp_law_dynamic_search`, `sp_media_dynamic_search`, `sp_menu_dynamic_search`, `sp_partner_dynamic_search`, `sp_personincharge_dynamic_search`, `sp_recourse_dynamic_search`, `sp_regulation_dynamic_search`, `sp_requirement_dynamic_search`, `sp_translation_dynamic_search`, `sp_translation_menu_dynamic_search`, `sp_unitincharge_dynamic_search`, `sp_xmlSerializedItem_dynamic_search`, `sp_public_reviews_dynamic_search`
-
-#### Scenario: Update translation search procedures for NULL i18n fallback
-- **WHEN** the stored procedure update script is executed
-- **THEN** 5 translation search procedures SHALL be updated with varchar -> nvarchar conversion AND NULL i18n fallback pattern `(i.Name is null and LOWER(o.Name) LIKE ...)`:
-  - `sp_cost_variables_translation_search`, `sp_filter_translation_search`, `sp_filteroption_translation_search`, `sp_options_translation_search`, `sp_site_menu_translation_search`
-
-#### Scenario: Update feedback procedures with guest visibility filter
+#### Scenario: Update IsVisibleToGuest procedures
 - **WHEN** the stored procedure update script is executed
 - **THEN** 4 feedback procedures SHALL be updated to add `AND m.IsVisibleToGuest = 1` filter:
   - `sp_feedback_menu_get_children`, `sp_feedback_menu_get_first_level`, `sp_feedback_objective_get_children`, `sp_feedback_objective_get_first_level`
+- **AND** `sp_on_updated_menu_tree` SHALL be updated to include IsVisibleToGuest in recursive CTE
+- **AND** `sp_on_updated_objective` SHALL be updated with IsVisibleToGuest handling
 
-#### Scenario: Update published procedures with SystemLanguage changes
+#### Scenario: Update EntityInCharge-related procedures
 - **WHEN** the stored procedure update script is executed
-- **THEN** 3 published procedures SHALL be updated:
-  - `sp_on_published_block` and `sp_on_published_step` with casing/alias reformatting
-  - `sp_on_published_recourse` with `community_lang WHERE lang_principal = 1` replacing `SystemLanguage WHERE IsPrincipal = 1`
+- **THEN** 6 procedures SHALL be updated with GoogleMapsURL and Zone_Id column support:
+  - `sp_on_updated_entityInCharge`, `sp_snapshot_getStepEICs`, `sp_snapshot_getStepRegionalEICs`, `sp_take_snapshot_step`, `sp_update_snapshot_recourse`, `sp_update_snapshot_step`
 
-#### Scenario: Update column-aware procedures
+#### Scenario: Update Admin_Step column procedures
 - **WHEN** the stored procedure update script is executed
-- **THEN** `sp_on_updated_unitInCharge` SHALL be updated to include `Website` column in UPDATE statements
-- **AND** `sp_on_updated_media` SHALL be updated to use i18n-aware media fields: `isnull(m_i18n.FileName, m.FileName)` pattern
+- **THEN** 3 procedures SHALL be updated with Level_Id, NumberOfUsers, Summary, IsReachingOffice support:
+  - `sp_snapshot_getStep`, `sp_take_snapshot_step`, `sp_update_snapshot_step`
 
-#### Scenario: Update structurally changed procedures
+#### Scenario: Update GenericRequirement_NumberOfPages procedures
 - **WHEN** the stored procedure update script is executed
-- **THEN** the following 9 procedures SHALL be dropped and recreated with SPA definitions:
-  - `sp_on_updated_entityInCharge` - with GoogleMapsURL, Zone_Id, Snapshot_Object_Media handling, OnlineStepURL update
-  - `sp_on_updated_genericRequirement` - with NumberOfPages, IsEmittedByInstitution, Snapshot_StepRequirementCost sync
-  - `sp_on_updated_law` - with removed IsLegislation checks, i18n media, Public_Generate_ALL call
-  - `sp_snapshot_getStep` - with ROW_NUMBER() windowed function replacing MAX()/GROUP BY
-  - `sp_take_snapshot_objective` - with Snapshot_StepRequirementCost/ObjectiveSectionVisibility sync, Level_Id, NumberOfUsers, Summary
-  - `sp_take_snapshot_step` - with Zone_Id, i18n media, Snapshot_StepRequirementCost, Website
-  - `sp_update_snapshot_block` - with updated snapshot logic
-  - `sp_update_snapshot_recourse` - with updated snapshot logic
-  - `sp_update_snapshot_step` - with updated snapshot logic
+- **THEN** 4 procedures SHALL be updated with NumberOfPages column support:
+  - `sp_on_updated_genericRequirement`, `sp_snapshot_getStepRequirements`, `sp_take_snapshot_step`, `sp_update_snapshot_step`
+
+#### Scenario: Update Snapshot_StepRequirementCost procedures
+- **WHEN** the stored procedure update script is executed
+- **THEN** 4 procedures SHALL be updated with StepRequirementCost table sync:
+  - `sp_on_updated_genericRequirement`, `sp_take_snapshot_objective`, `sp_take_snapshot_step`, `sp_update_snapshot_step`
+
+#### Scenario: Update i18n-aware media procedures
+- **WHEN** the stored procedure update script is executed
+- **THEN** 7 procedures SHALL be updated with `isnull(m_i18n.FileName, m.FileName)` pattern:
+  - `sp_on_updated_entityInCharge`, `sp_on_updated_law`, `sp_on_updated_media`, `sp_on_updated_personInCharge`, `sp_on_updated_unitInCharge`, `sp_take_snapshot_step`, `sp_update_snapshot_step`
+
+#### Scenario: Update remaining changed procedures
+- **WHEN** the stored procedure update script is executed
+- **THEN** the following procedures SHALL also be updated:
+  - `sp_on_updated_entityInCharge` - OnlineStepURL update logic
+  - `sp_snapshot_getStepSectionVisibility` - IsSummaryVisible column
+  - `sp_on_updated_law` - Removed IsLegislation guards, added Public_Generate_ALL call
+  - `sp_on_updated_menu` - IsVisibleToGuest-related changes
+  - `sp_snapshot_getStepRecourses`, `sp_snapshot_getStepRecourseUICs`, `sp_snapshot_getStepRegionalPICs`, `sp_snapshot_getStepResults`, `sp_snapshot_getStepUICs` - Schema column additions
+  - `sp_update_snapshot_block` - Updated snapshot logic
 
 ---
 
@@ -204,16 +301,21 @@ The migration scripts SHALL remove stored procedures that are no longer needed i
 ---
 
 ### Requirement: Foreign Key Constraints
-The migration scripts SHALL add foreign key constraints for new tables to maintain referential integrity.
+The migration scripts SHALL add foreign key constraints for new tables and new columns to maintain referential integrity.
+
+#### Scenario: Add FK constraints for new columns on existing tables
+- **WHEN** the foreign key script is executed
+- **THEN** appropriate foreign key constraints SHALL be added for:
+  - `Admin_Step.Level_Id` -> `Option.Id` (FK_Admin_Step_Level)
+  - `EntityInCharge.Zone_Id` -> `Option.Id` (FK_EntityInCharge_Zone)
 
 #### Scenario: Add FK constraints for new tables
 - **WHEN** the foreign key script is executed
 - **THEN** appropriate foreign key constraints SHALL be added for:
-  - `Admin_ObjectiveSectionVisibility.Objective_Id`
-  - `Snapshot_ObjectiveSectionVisibility.Registry_Id`
-  - `FilterOption_Product.FilterOption_Id`
-  - `GenericRequirement_Cost.GenericRequirement_Id`
-  - `Snapshot_StepRequirementCost.Registry_Id`
+  - `Admin_ObjectiveSectionVisibility.Objective_Id` -> `Admin_Objective.Id`
+  - `FilterOption_Product.FilterOption_Id` -> `FilterOption.Id`
+  - `GenericRequirement_Cost.GenericRequirement_Id` -> `GenericRequirement.Id`
+  - `GenericRequirement_Cost.Level_Id` -> `Option.Id`
 
 ---
 

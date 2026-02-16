@@ -1,90 +1,115 @@
 -- =============================================
 -- Migration: 070_add_foreign_keys
 -- Date: 2026-02-16
--- Description: Add foreign key constraints for the 5 new tables.
---   Admin_ObjectiveSectionVisibility -> Admin_Objective
---   Snapshot_ObjectiveSectionVisibility -> Registry
---   FilterOption_Product -> FilterOption
---   GenericRequirement_Cost -> GenericRequirement
---   Snapshot_StepRequirementCost -> Registry
+-- Description: Add 6 new foreign key constraints for new columns and tables.
+--   FK definitions extracted verbatim from new-spa-structure.sql (Libya).
+-- Execution: Run in SSMS against the old-structure database
+-- Dependencies: 010_add_new_columns.sql, 020_create_new_tables.sql
 -- =============================================
 
-BEGIN TRANSACTION
-BEGIN TRY
+SET NOCOUNT ON;
 
-    -- =============================================
-    -- 1. Admin_ObjectiveSectionVisibility.Objective_Id -> Admin_Objective.Id
-    -- =============================================
-    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Admin_ObjectiveSectionVisibility_Objective')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Admin_ObjectiveSectionVisibility' AND type = 'U')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Admin_Objective' AND type = 'U')
-    BEGIN
-        ALTER TABLE [dbo].[Admin_ObjectiveSectionVisibility]
-        ADD CONSTRAINT [FK_Admin_ObjectiveSectionVisibility_Objective]
-        FOREIGN KEY ([Objective_Id]) REFERENCES [dbo].[Admin_Objective]([Id])
-        PRINT 'Added FK: Admin_ObjectiveSectionVisibility.Objective_Id -> Admin_Objective.Id'
-    END
+PRINT '=== Migration 070: Add Foreign Keys ==='
+PRINT 'Started at: ' + CONVERT(varchar(30), GETDATE(), 120)
+PRINT ''
 
-    -- =============================================
-    -- 2. Snapshot_ObjectiveSectionVisibility.Registry_Id -> Registry.Id
-    -- =============================================
-    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Snapshot_ObjectiveSectionVisibility_Registry')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_ObjectiveSectionVisibility' AND type = 'U')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Registry' AND type = 'U')
-    BEGIN
-        ALTER TABLE [dbo].[Snapshot_ObjectiveSectionVisibility]
-        ADD CONSTRAINT [FK_Snapshot_ObjectiveSectionVisibility_Registry]
-        FOREIGN KEY ([Registry_Id]) REFERENCES [dbo].[Registry]([Id])
-        PRINT 'Added FK: Snapshot_ObjectiveSectionVisibility.Registry_Id -> Registry.Id'
-    END
+-- =========================================
+-- 1. FK_Admin_Step_Level: Admin_Step.Level_Id -> Option.Id
+-- =========================================
 
-    -- =============================================
-    -- 3. FilterOption_Product.FilterOption_Id -> FilterOption.Id
-    -- =============================================
-    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_FilterOption_Product_FilterOption')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'FilterOption_Product' AND type = 'U')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'FilterOption' AND type = 'U')
-    BEGIN
-        ALTER TABLE [dbo].[FilterOption_Product]
-        ADD CONSTRAINT [FK_FilterOption_Product_FilterOption]
-        FOREIGN KEY ([FilterOption_Id]) REFERENCES [dbo].[FilterOption]([Id])
-        PRINT 'Added FK: FilterOption_Product.FilterOption_Id -> FilterOption.Id'
-    END
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Admin_Step_Level')
+BEGIN
+    ALTER TABLE [dbo].[Admin_Step] WITH CHECK ADD CONSTRAINT [FK_Admin_Step_Level] FOREIGN KEY([Level_Id])
+    REFERENCES [dbo].[Option] ([Id])
 
-    -- =============================================
-    -- 4. GenericRequirement_Cost.GenericRequirement_Id -> GenericRequirement.Id
-    -- =============================================
-    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_GenericRequirement_Cost_GenericRequirement')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'GenericRequirement_Cost' AND type = 'U')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'GenericRequirement' AND type = 'U')
-    BEGIN
-        ALTER TABLE [dbo].[GenericRequirement_Cost]
-        ADD CONSTRAINT [FK_GenericRequirement_Cost_GenericRequirement]
-        FOREIGN KEY ([GenericRequirement_Id]) REFERENCES [dbo].[GenericRequirement]([Id])
-        PRINT 'Added FK: GenericRequirement_Cost.GenericRequirement_Id -> GenericRequirement.Id'
-    END
+    ALTER TABLE [dbo].[Admin_Step] CHECK CONSTRAINT [FK_Admin_Step_Level]
+    PRINT '  Added FK_Admin_Step_Level'
+END
+ELSE
+    PRINT '  FK_Admin_Step_Level already exists - skipped'
+GO
 
-    -- =============================================
-    -- 5. Snapshot_StepRequirementCost.Registry_Id -> Registry.Id
-    -- =============================================
-    IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Snapshot_StepRequirementCost_Registry')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Snapshot_StepRequirementCost' AND type = 'U')
-    AND EXISTS (SELECT 1 FROM sys.objects WHERE name = 'Registry' AND type = 'U')
-    BEGIN
-        ALTER TABLE [dbo].[Snapshot_StepRequirementCost]
-        ADD CONSTRAINT [FK_Snapshot_StepRequirementCost_Registry]
-        FOREIGN KEY ([Registry_Id]) REFERENCES [dbo].[Registry]([Id])
-        PRINT 'Added FK: Snapshot_StepRequirementCost.Registry_Id -> Registry.Id'
-    END
+-- =========================================
+-- 2. FK_EntityInCharge_Zone: EntityInCharge.Zone_Id -> Option.Id
+-- =========================================
 
-    COMMIT TRANSACTION
-    PRINT '========================================='
-    PRINT 'Migration 070_add_foreign_keys completed successfully'
-    PRINT '========================================='
-END TRY
-BEGIN CATCH
-    ROLLBACK TRANSACTION
-    PRINT 'Migration 070_add_foreign_keys FAILED: ' + ERROR_MESSAGE()
-    ;THROW
-END CATCH
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_EntityInCharge_Zone')
+BEGIN
+    ALTER TABLE [dbo].[EntityInCharge] WITH CHECK ADD CONSTRAINT [FK_EntityInCharge_Zone] FOREIGN KEY([Zone_Id])
+    REFERENCES [dbo].[Option] ([Id])
+
+    ALTER TABLE [dbo].[EntityInCharge] CHECK CONSTRAINT [FK_EntityInCharge_Zone]
+    PRINT '  Added FK_EntityInCharge_Zone'
+END
+ELSE
+    PRINT '  FK_EntityInCharge_Zone already exists - skipped'
+GO
+
+-- =========================================
+-- 3. FK_Admin_ObjectiveSectionVisibility_Objective: Objective_Id -> Admin_Objective.Id
+-- =========================================
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Admin_ObjectiveSectionVisibility_Objective')
+BEGIN
+    ALTER TABLE [dbo].[Admin_ObjectiveSectionVisibility] WITH CHECK ADD CONSTRAINT [FK_Admin_ObjectiveSectionVisibility_Objective] FOREIGN KEY([Objective_Id])
+    REFERENCES [dbo].[Admin_Objective] ([Id])
+
+    ALTER TABLE [dbo].[Admin_ObjectiveSectionVisibility] CHECK CONSTRAINT [FK_Admin_ObjectiveSectionVisibility_Objective]
+    PRINT '  Added FK_Admin_ObjectiveSectionVisibility_Objective'
+END
+ELSE
+    PRINT '  FK_Admin_ObjectiveSectionVisibility_Objective already exists - skipped'
+GO
+
+-- =========================================
+-- 4. FK_FilterOption_Product_FilterOption: FilterOption_Id -> FilterOption.Id
+-- =========================================
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_FilterOption_Product_FilterOption')
+BEGIN
+    ALTER TABLE [dbo].[FilterOption_Product] WITH CHECK ADD CONSTRAINT [FK_FilterOption_Product_FilterOption] FOREIGN KEY([FilterOption_Id])
+    REFERENCES [dbo].[FilterOption] ([Id])
+
+    ALTER TABLE [dbo].[FilterOption_Product] CHECK CONSTRAINT [FK_FilterOption_Product_FilterOption]
+    PRINT '  Added FK_FilterOption_Product_FilterOption'
+END
+ELSE
+    PRINT '  FK_FilterOption_Product_FilterOption already exists - skipped'
+GO
+
+-- =========================================
+-- 5. FK_GenericRequirement_Id: GenericRequirement_Cost.GenericRequirement_Id -> GenericRequirement.Id
+-- =========================================
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_GenericRequirement_Id')
+BEGIN
+    ALTER TABLE [dbo].[GenericRequirement_Cost] WITH CHECK ADD CONSTRAINT [FK_GenericRequirement_Id] FOREIGN KEY([GenericRequirement_Id])
+    REFERENCES [dbo].[GenericRequirement] ([Id])
+
+    ALTER TABLE [dbo].[GenericRequirement_Cost] CHECK CONSTRAINT [FK_GenericRequirement_Id]
+    PRINT '  Added FK_GenericRequirement_Id'
+END
+ELSE
+    PRINT '  FK_GenericRequirement_Id already exists - skipped'
+GO
+
+-- =========================================
+-- 6. FK_Level_Id: GenericRequirement_Cost.Level_Id -> Option.Id
+-- =========================================
+
+IF NOT EXISTS (SELECT 1 FROM sys.foreign_keys WHERE name = 'FK_Level_Id')
+BEGIN
+    ALTER TABLE [dbo].[GenericRequirement_Cost] WITH CHECK ADD CONSTRAINT [FK_Level_Id] FOREIGN KEY([Level_Id])
+    REFERENCES [dbo].[Option] ([Id])
+
+    ALTER TABLE [dbo].[GenericRequirement_Cost] CHECK CONSTRAINT [FK_Level_Id]
+    PRINT '  Added FK_Level_Id'
+END
+ELSE
+    PRINT '  FK_Level_Id already exists - skipped'
+GO
+
+PRINT ''
+PRINT '=== Migration 070 completed successfully ==='
+PRINT 'Finished at: ' + CONVERT(varchar(30), GETDATE(), 120)
 GO
