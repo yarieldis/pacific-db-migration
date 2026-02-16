@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -ExecutionPolicy Bypass -File \"C:\\\\Users\\\\yarie\\\\source\\\\repos\\\\new-database-layer\\\\pacific-db-migration\\\\extract_tables.ps1\" -File \"C:\\\\Users\\\\yarie\\\\source\\\\repos\\\\new-database-layer\\\\pacific-db-migration\\\\new-spa-structure.sql\" -TableName \"Snapshot_ObjectiveSectionVisibility\" -Encoding \"Unicode\")",
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"$c = Get-Content ''C:\\\\Users\\\\yarie\\\\source\\\\repos\\\\new-database-layer\\\\pacific-db-migration\\\\new-spa-structure.sql'' -Encoding Unicode -Raw; @\\(''Snapshot_Media_i18n'',''Snapshot_GenericRequirement'',''Snapshot_UnitInCharge'',''Snapshot_EntityInCharge'',''Snapshot_Filter'',''Snapshot_Step_i18n''\\) | ForEach-Object { $t = $_ $found = $c -match \\(''CREATE TABLE \\\\[dbo\\\\]\\\\.\\\\['' + $t + ''\\\\]''\\); Write-Output \\(''{0}: {1}'' -f $t, $found\\) }\")",
+      "Bash(powershell -ExecutionPolicy Bypass -Command:*)"
+    ]
+  }
+}
